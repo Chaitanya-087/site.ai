@@ -23,6 +23,18 @@ async def create_chat_by_user_id(user_id: str) -> basic_chat:
     resp = chatsCollection.insert_one(chat.model_dump())
     return basic_chat({"_id": resp.inserted_id, **chat.model_dump()})
 
+async def rename_chat_by_id(chat_id: str, name: str) -> basic_chat:
+    """Rename a chat by chat ID."""
+    if not ObjectId.is_valid(chat_id):
+        raise HTTPException(status_code=400, detail="Invalid chat ID")
+    resp = chatsCollection.update_one(
+        {"_id": ObjectId(chat_id)},
+        {"$set": {"name": name}}
+    )
+    if resp.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Chat not found")
+    return basic_chat({"_id": chat_id, "name": name})
+
 async def get_chat_by_id(chat_id: str) -> detailed_chat:
     """Get a chat by chat ID."""
     if not ObjectId.is_valid(chat_id):
@@ -55,7 +67,7 @@ async def post_message_by_chat_id(prompt: Prompt, chat_id: str) -> dict:
     if not ObjectId.is_valid(chat_id):
         raise HTTPException(status_code=400, detail="Invalid chat ID")
 
-    response = await get_ai_response(prompt.input)
+    response = await get_ai_response(prompt.input, chat_id)
     user_message = Message(content=prompt.input, type=MessageType.USER)
     ai_message = Message(content=response['explanation'], type=MessageType.AI)
     code = Code(html=response['html'], css=response['css'], js=response['js'])

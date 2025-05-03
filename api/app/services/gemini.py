@@ -45,6 +45,7 @@ prompt = ChatPromptTemplate.from_messages(
         (
             "system",
             "You are a web developer. Always respond with valid JSON in this format:\n"
+            "include only code inside body tag. "
             "{{\n"
             "  'html': '',\n"
             "  'css': '',\n"
@@ -73,26 +74,20 @@ runnableWithHistory = RunnableWithMessageHistory(
 async def get_ai_response(question: str, session_id: str = "default_id") -> Response:
     """Get a response from the Gemini model."""
     try:
-        # Await the invoke function
         res = runnableWithHistory.invoke(
             {"input": question},
             config={"configurable": {"session_id": session_id}},
         )
-        # Attempt to parse the response content
         parsed_response = parser.parse(res.content)
         return parsed_response
     
     except json.JSONDecodeError as e:
-        # Log response for debugging
         print("Error parsing response as JSON:", res.content)
         raise ValueError("Received invalid JSON format from the model.") from e
 
     except Exception as e:
-        # Handle unexpected errors
         print("An error occurred:", e)
         raise e
-
-
 
 # python3 -m api.app.services.gemini
 # driver code
