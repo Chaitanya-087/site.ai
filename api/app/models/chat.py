@@ -17,6 +17,9 @@ class Prompt(BaseModel):
     """
     input: str
 
+class RenameRequest(BaseModel):
+    name: str
+    
 class MessageType(str, Enum):
     """Represents the type of message in a chat.
 

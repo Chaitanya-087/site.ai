@@ -1,4 +1,4 @@
-import { Snail, Plus, Ellipsis } from "lucide-react"
+import { Snail, Plus } from "lucide-react"
 
 import {
     Sidebar,
@@ -6,38 +6,60 @@ import {
     SidebarFooter,
     SidebarGroup,
     SidebarGroupContent,
-    SidebarGroupLabel,
     SidebarHeader,
     SidebarMenu,
     SidebarMenuButton,
     SidebarMenuItem,
 } from "@/components/ui/sidebar"
-import { useEffect, useState } from "react";
-import { Link, NavLink, useNavigate } from "react-router-dom";
+import { useCallback, useEffect, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { Button } from "./ui/button";
 import { NavUser } from "./nav-user";
-import avatarImgSrc from '@/assets/avatar.jpeg';
-import { SignedIn, SignedOut, useAuth, useClerk } from "@clerk/clerk-react";
-import { useUser } from "@clerk/clerk-react";
-const USERID = 124; // hardcoded for now
-const data = {
-    name: "shadcn",
-    email: "m@example.com",
-    avatar: avatarImgSrc,
+import { SignedIn, SignedOut, useUser, useClerk } from "@clerk/clerk-react";
+import { useAuth } from "@/hooks/use-auth";
+import { NavChats } from "./nav-chats";
 
-}
+// default
+// const USERID = 124;
 
 export function AppSidebar() {
-    const [chats, setChats] = useState([]);
-    const { user, isSignedIn } = useUser();
-    const navigate = useNavigate();
-    const { userId } = useAuth()
-    const [userDetails, setUserDetails] = useState(data);
     const clerk = useClerk();
+    const navigate = useNavigate();
+    const { user, isSignedIn } = useUser();
+    const [chats, setChats] = useState([]);
+    const { currentUser, setCurrentUser } = useAuth();
+    const [isChatsLoaded, setIsChatsLoaded] = useState(false);
+
+    const deleteChat = async (id) => {
+        const res = await fetch(`http://localhost:8080/chats/${id}`, {
+            method: 'DELETE'
+        })
+        const data = await res.json();
+        console.log("in deleteChat handler", id)
+        console.log(data?.message + " " + id)
+        const newChats = chats.filter(chat => chat.id != id)
+        setChats(newChats)
+    }
+
+    const renameChat = async (id, newName) => {
+        const res = await fetch(`http://localhost:8080/chats/${id}/rename`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name: newName }),
+        })
+        const data = await res.json();
+        console.log(data?.message + " " + id)
+        const newChats = chats.map(chat => {
+            if (chat.id === id) {
+                return { ...chat, name: newName }
+            } return chat
+        })
+        setChats(newChats);
+    }
 
     const createChat = async () => {
         if (isSignedIn) {
-            const res = await fetch(`http://localhost:8080/chats/users/${userId}`, {
+            const res = await fetch(`http://localhost:8080/chats/users/${currentUser?.id}`, {
                 method: 'POST'
             })
             const data = await res.json();
@@ -46,26 +68,44 @@ export function AppSidebar() {
         }
     }
 
-    const fetchChats = async () => {
-        const res = await fetch(`http://localhost:8080/chats/users/${userId || USERID}/all`);
-        const data = await res.json();
-        setChats(data);
-    };
+    const fetchChats = useCallback(async () => {
+        if (isSignedIn) {
+            setIsChatsLoaded(false)
+            const res = await fetch(`http://localhost:8080/chats/users/${currentUser?.id}/all`);
+            const data = await res.json();
+            setIsChatsLoaded(true)
+            setChats(data);
+        }
+    }, [currentUser?.id, isSignedIn]);
+
+    const handleSignIn = async () => {
+        try {
+            clerk.openSignIn({ redirectUrl: "/" });
+        } catch (error) {
+            console.error("Sign-in failed:", error);
+        }
+    }
+
     useEffect(() => {
         const fetchData = async () => {
-            await fetchChats();
-
             if (isSignedIn && user) {
-                setUserDetails({
-                    name: user.firstName + user.lastName || "Unknown User",
-                    email: user.primaryEmailAddress?.emailAddress || "No email",
-                    avatar: user.imageUrl || avatarImgSrc,
-                });
+                if (!currentUser?.id) {
+                    setCurrentUser({
+                        id: user.id,
+                        name: `${user.firstName} ${user.lastName}`,
+                        email: user.primaryEmailAddress?.emailAddress,
+                        avatar: user.imageUrl,
+                    });
+                }
+                await fetchChats();
             }
         };
-
         fetchData();
-    }, [user, isSignedIn]);
+        return () => {
+            fetchData();
+        }
+    }, [isSignedIn, user, currentUser?.id, setCurrentUser, fetchChats]);
+
     return (
         <Sidebar className="border-none">
             <SidebarHeader>
@@ -97,42 +137,17 @@ export function AppSidebar() {
                         </SidebarMenu>
                     </SidebarGroupContent>
                 </SidebarGroup>}
-                <SidebarGroup>
-                    <SidebarGroupLabel>chats</SidebarGroupLabel>
-                    <SidebarGroupContent>
-                        <SidebarMenu>
-                            {chats.map((item) => (
-                                <SidebarMenuItem key={item.id}>
-                                    <NavLink
-                                        to={`/${item.id}`}
-                                        end
-                                        className={({ isActive }) => isActive ? 'data-active' : ''}
-                                    >
-                                        {({ isActive }) => (
-                                            <SidebarMenuButton asChild data-active={isActive}>
-                                                <div className="flex items-center justify-between w-full">
-                                                    <span className="block truncate text-sm">{item.name}</span>
-                                                    <Ellipsis className="w-4 h-4 invisible group-hover/menu-item:visible transition-opacity duration-200" />
-                                                </div>
-                                            </SidebarMenuButton>
-                                        )}
-                                    </NavLink>
-                                </SidebarMenuItem>
-                            ))}
-                        </SidebarMenu>
-                    </SidebarGroupContent>
-                </SidebarGroup>
+                <NavChats chats={chats} isLoaded={isChatsLoaded} deleteChat={deleteChat} renameChat={renameChat} />
             </SidebarContent>
 
             <SidebarFooter>
                 <SignedOut>
-                    <Button variant="default" onClick={() => clerk.openSignIn({})} >
+                    <Button variant="default" onClick={handleSignIn} >
                         login
                     </Button>
                 </SignedOut>
                 <SignedIn>
-                    {/* <UserButton /> */}
-                    <NavUser user={userDetails} />
+                    <NavUser />
                 </SignedIn>
             </SidebarFooter>
 

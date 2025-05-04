@@ -1,9 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import PropTypes from 'prop-types';
 import Editor, { useMonaco } from '@monaco-editor/react';
 import { Button } from '@/components/ui/button';
 import { Code } from 'lucide-react';
-import { useTheme } from './theme-provider';
+import { useTheme } from '../hooks/use-theme';
 
 function RenderEditor({ language, code, onChange, theme }) {
     const monaco = useMonaco();
@@ -49,6 +49,12 @@ function RenderEditor({ language, code, onChange, theme }) {
         />
     );
 }
+RenderEditor.propTypes = {
+    language: PropTypes.string.isRequired,
+    code: PropTypes.string.isRequired,
+    onChange: PropTypes.func.isRequired,
+    theme: PropTypes.string.isRequired,
+};
 
 function CodeEditor({ code, setCode }) {
     const [srcDoc, setSrcDoc] = useState('');
@@ -129,7 +135,7 @@ function CodeEditor({ code, setCode }) {
                 </head>
                 <body>
                     ${code.html}
-                    <script>${code.js}<\/script>
+                    <script>${code.js}</script>
                 </body>
                 </html>
             `;

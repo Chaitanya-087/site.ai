@@ -6,7 +6,7 @@ from ..config.mongo import chatsCollection
 
 from ..schemas.chat import all_chats,basic_chat,detailed_chat
 
-from ..models.chat import Chat,Prompt,Code, Response, MessageType, Message
+from ..models.chat import Chat,Prompt,Code, MessageType, Message
 
 from .gemini import get_ai_response
 
@@ -33,7 +33,7 @@ async def rename_chat_by_id(chat_id: str, name: str) -> basic_chat:
     )
     if resp.matched_count == 0:
         raise HTTPException(status_code=404, detail="Chat not found")
-    return basic_chat({"_id": chat_id, "name": name})
+    return {"message": "Chat renamed successfully."}    
 
 async def get_chat_by_id(chat_id: str) -> detailed_chat:
     """Get a chat by chat ID."""

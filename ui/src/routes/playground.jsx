@@ -1,43 +1,34 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { useLocation, useParams } from 'react-router-dom';
 import { Allotment } from "allotment";
 import { FaArrowDownLong } from "react-icons/fa6";
 import SyncLoader from "react-spinners/SyncLoader";
 import CodeEditor from '@/components/code-editor';
-import avatarImgSrc from '@/assets/avatar.jpeg';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Send, Snail } from 'lucide-react';
-import { useUser } from '@clerk/clerk-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { SiteHeader } from '@/components/site-header';
-
-const fallbackUserData = {
-  name: "shadcn",
-  email: "m@example.com",
-  avatar: avatarImgSrc,
-};
+import { useAuth } from '@/hooks/use-auth';
 
 function Playground() {
   const { id } = useParams();
   const chatAreaRef = useRef(null);
-  const { user, isSignedIn } = useUser();
+  const { currentUser: user } = useAuth();
   const [chat, setChat] = useState({ messages: [] });
-  const [prompt, setPrompt] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [hasScrolledToTop, setHasScrolledToTop] = useState(false);
   const [code, setCode] = useState({ html: '', css: '', js: '' });
-  const [userDetails, setUserDetails] = useState(fallbackUserData);
+
+  const location = useLocation();
+  const promptFromState = location.state?.prompt;
+  const [prompt, setPrompt] = useState(promptFromState || '');
 
   useEffect(() => {
-    if (isSignedIn && user) {
-      setUserDetails({
-        name: user.firstName + " " + user.lastName || "Unknown User",
-        email: user.primaryEmailAddress?.emailAddress || "No email",
-        avatar: user.imageUrl || avatarImgSrc,
-      });
+    if (promptFromState) {
+      onSubmit();
     }
-  }, [isSignedIn, user]);
+  }, [onSubmit, promptFromState]);
 
   useEffect(() => {
     const fetchChat = async () => {
@@ -67,7 +58,7 @@ function Playground() {
     setHasScrolledToTop(scrollHeight - scrollTop - clientHeight > offset);
   };
 
-  const onSubmit = async () => {
+  const onSubmit = useCallback(async () => {
     if (prompt.trim()) {
       const userMessage = {
         id: Date.now().toString(),
@@ -104,7 +95,7 @@ function Playground() {
         setPrompt('');
       }
     }
-  };
+  }, [id, prompt]);
 
   return (
     <Allotment separator className="w-full">
@@ -129,7 +120,7 @@ function Playground() {
                     </Avatar>
                   ) : (
                     <Avatar className="h-6 w-6 rounded-full">
-                      <AvatarImage src={userDetails.avatar} alt={userDetails.name} />
+                      <AvatarImage src={user.avatar} alt={user.name} />
                       <AvatarFallback>CN</AvatarFallback>
                     </Avatar>
                   )}

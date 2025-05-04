@@ -1,6 +1,4 @@
 import {
-    BellIcon,
-    CreditCardIcon,
     LogOutIcon,
     MoreVerticalIcon,
     UserCircleIcon,
@@ -28,12 +26,28 @@ import {
     SidebarMenuItem,
     useSidebar,
 } from "@/components/ui/sidebar"
-import { useAuth, useClerk } from "@clerk/clerk-react"
+import { useClerk } from "@clerk/clerk-react"
+import { useNavigate } from "react-router-dom"
+import { useAuth } from "@/hooks/use-auth"
 
-export function NavUser({ user }) {
-    const { isMobile } = useSidebar()
-    const { signOut } = useAuth();
+export function NavUser() {
+    const { currentUser: user } = useAuth();
+    const navigate = useNavigate();
+    const { isMobile } = useSidebar();
     const clerk = useClerk();
+
+    const handleLogout = async () => {
+        try {
+            sessionStorage.clear();
+            localStorage.clear();
+
+            await clerk.signOut();
+
+            navigate("/");
+        } catch (error) {
+            console.error("Logout failed:", error);
+        }
+    };
 
     return (
         <SidebarMenu>
@@ -85,7 +99,7 @@ export function NavUser({ user }) {
                             </DropdownMenuItem>
                         </DropdownMenuGroup>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem onClick={() => signOut()}>
+                        <DropdownMenuItem onClick={handleLogout}>
                             <LogOutIcon />
                             Log out
                         </DropdownMenuItem>

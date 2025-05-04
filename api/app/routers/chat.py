@@ -3,10 +3,10 @@ from fastapi import APIRouter
 
 from ..services.chat import get_chats_by_user_id, create_chat_by_user_id,\
                             get_chat_by_id, delete_chat_by_id, \
-                            post_message_by_chat_id
+                            post_message_by_chat_id, rename_chat_by_id
 from ..services.gemini import get_ai_response
 
-from ..models.chat import Prompt
+from ..models.chat import Prompt,RenameRequest
 
 router = APIRouter(
     prefix="/chats",
@@ -37,6 +37,11 @@ async def default_chat(prompt: Prompt):
 async def send_message(chat_id: str, prompt: Prompt):
     """Post a message in a chat by chat ID."""
     return await post_message_by_chat_id(prompt, chat_id)
+
+@router.post("/{chat_id}/rename", status_code=200)
+async def rename_chat(chat_id: str, body: RenameRequest):
+    """Rename a chat by chat ID."""
+    return await rename_chat_by_id(chat_id, body.name)
 
 @router.delete("/{chat_id}", status_code=200)
 async def delete_chat(chat_id: str):
