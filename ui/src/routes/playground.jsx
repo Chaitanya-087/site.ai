@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useLocation, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { Allotment } from "allotment";
 import { FaArrowDownLong } from "react-icons/fa6";
 import SyncLoader from "react-spinners/SyncLoader";
@@ -9,26 +9,23 @@ import { Button } from '@/components/ui/button';
 import { Send, Snail } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { SiteHeader } from '@/components/site-header';
-import { useAuth } from '@/hooks/use-auth';
+// import { useAuth } from '@/hooks/use-auth';
+import { useAuthStore } from '@/store/auth-store';
 
 function Playground() {
   const { id } = useParams();
   const chatAreaRef = useRef(null);
-  const { currentUser: user } = useAuth();
+  const { user } = useAuthStore();
+  // const { currentUser: user } = useAuth();
   const [chat, setChat] = useState({ messages: [] });
   const [isLoading, setIsLoading] = useState(false);
   const [hasScrolledToTop, setHasScrolledToTop] = useState(false);
   const [code, setCode] = useState({ html: '', css: '', js: '' });
+  const navigate = useNavigate()
 
   const location = useLocation();
-  const promptFromState = location.state?.prompt;
-  const [prompt, setPrompt] = useState(promptFromState || '');
-
-  useEffect(() => {
-    if (promptFromState) {
-      onSubmit();
-    }
-  }, [onSubmit, promptFromState]);
+  const [prompt, setPrompt] = useState('');
+  const hasAutoSubmitted = useRef(false); // prevent multiple auto-submits
 
   useEffect(() => {
     const fetchChat = async () => {
@@ -96,6 +93,29 @@ function Playground() {
       }
     }
   }, [id, prompt]);
+
+  useEffect(() => {
+    const initialPrompt = location.state?.prompt;
+
+    if (initialPrompt && !hasAutoSubmitted.current) {
+      hasAutoSubmitted.current = true;
+      setPrompt(initialPrompt);
+    }
+  }, [location.state]);
+
+  useEffect(() => {
+    if (hasAutoSubmitted.current && prompt.trim()) {
+      onSubmit();
+
+      console.log("print")
+    }
+  }, [prompt, onSubmit]);
+
+  useEffect(() => {
+    if (hasAutoSubmitted.current) {
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+  }, [navigate, location.pathname]);
 
   return (
     <Allotment separator className="w-full">

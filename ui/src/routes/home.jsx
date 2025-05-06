@@ -38,6 +38,7 @@ function Home() {
                             placeholder="Start typing your idea..." className="h-full border-none focus-visible:ring-0" 
                             value={prompt} 
                             onChange={(e) => setPrompt(e.target.value)} 
+                            
                             onKeyDown={(e) => e.key === 'Enter' && onSubmit()}    
                         />
                         <Button className="rounded-full size-[40px]" onClick={onSubmit} >

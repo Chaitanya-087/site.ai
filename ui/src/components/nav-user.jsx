@@ -27,27 +27,13 @@ import {
     useSidebar,
 } from "@/components/ui/sidebar"
 import { useClerk } from "@clerk/clerk-react"
-import { useNavigate } from "react-router-dom"
-import { useAuth } from "@/hooks/use-auth"
+// import { useAuth } from "@/hooks/use-auth"
+import { useAuthStore } from "@/store/auth-store"
 
 export function NavUser() {
-    const { currentUser: user } = useAuth();
-    const navigate = useNavigate();
-    const { isMobile } = useSidebar();
     const clerk = useClerk();
-
-    const handleLogout = async () => {
-        try {
-            sessionStorage.clear();
-            localStorage.clear();
-
-            await clerk.signOut();
-
-            navigate("/");
-        } catch (error) {
-            console.error("Logout failed:", error);
-        }
-    };
+    const { user, signOut } = useAuthStore();
+    const { isMobile } = useSidebar();
 
     return (
         <SidebarMenu>
@@ -99,7 +85,7 @@ export function NavUser() {
                             </DropdownMenuItem>
                         </DropdownMenuGroup>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem onClick={handleLogout}>
+                        <DropdownMenuItem onClick={() => signOut(clerk)}>
                             <LogOutIcon />
                             Log out
                         </DropdownMenuItem>
