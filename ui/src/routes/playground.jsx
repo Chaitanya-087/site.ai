@@ -1,47 +1,38 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useLocation, useNavigate, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { Allotment } from "allotment";
 import { FaArrowDownLong } from "react-icons/fa6";
-import SyncLoader from "react-spinners/SyncLoader";
-import CodeEditor from '@/components/code-editor';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Send, Snail } from 'lucide-react';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Send } from 'lucide-react';
 import { SiteHeader } from '@/components/site-header';
-// import { useAuth } from '@/hooks/use-auth';
-import { useAuthStore } from '@/store/auth-store';
+import { useChatStore } from '@/store/chat-store';
+import CodeEditor from '@/components/code-editor';
+import clsx from 'clsx';
+import { toast } from 'sonner';
 
 function Playground() {
   const { id } = useParams();
   const chatAreaRef = useRef(null);
-  const { user } = useAuthStore();
-  // const { currentUser: user } = useAuth();
-  const [chat, setChat] = useState({ messages: [] });
-  const [isLoading, setIsLoading] = useState(false);
-  const [hasScrolledToTop, setHasScrolledToTop] = useState(false);
-  const [code, setCode] = useState({ html: '', css: '', js: '' });
-  const navigate = useNavigate()
-
-  const location = useLocation();
   const [prompt, setPrompt] = useState('');
-  const hasAutoSubmitted = useRef(false); // prevent multiple auto-submits
+  const [hasScrolledToTop, setHasScrolledToTop] = useState(false);
+  const { selectedChat: chat, setSelectedChat, postMessage, error } = useChatStore();
 
   useEffect(() => {
-    const fetchChat = async () => {
-      if (id) {
-        const res = await fetch(`http://localhost:8080/chats/${id}`);
-        const data = await res.json();
-        setChat(data);
-        setCode(data.code);
-      }
-    };
-    fetchChat();
-  }, [id]);
+    if (id) {
+      setSelectedChat(id);
+    }
+  }, [id, setSelectedChat]);
 
   useEffect(() => {
     scrollToBottom();
   }, [chat.messages]);
+
+  useEffect(() => {
+    if (error) {
+      toast.error(error);
+    }
+  }, [error])
 
   const scrollToBottom = () => {
     if (chatAreaRef.current) {
@@ -55,71 +46,17 @@ function Playground() {
     setHasScrolledToTop(scrollHeight - scrollTop - clientHeight > offset);
   };
 
-  const onSubmit = useCallback(async () => {
-    if (prompt.trim()) {
-      const userMessage = {
-        id: Date.now().toString(),
-        content: prompt,
-        type: 'user',
-        created_at: new Date().toLocaleTimeString(),
-      };
+  const onSubmit = useCallback((customPrompt) => {
+    const finalPrompt = customPrompt ?? prompt;
+    if (!finalPrompt.trim()) return;
 
-      setChat(prevChat => ({
-        ...prevChat,
-        messages: [...prevChat.messages, userMessage],
-      }));
-
-      setIsLoading(true);
-
-      try {
-        const res = await fetch(`http://localhost:8080/chats/${id}/messages`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ input: prompt }),
-        });
-
-        const data = await res.json();
-
-        setChat(prevChat => ({
-          ...prevChat,
-          messages: [...prevChat.messages, data.message],
-        }));
-        setCode(data.code);
-      } catch (error) {
-        console.error("Error fetching AI response:", error);
-      } finally {
-        setIsLoading(false);
-        setPrompt('');
-      }
-    }
-  }, [id, prompt]);
-
-  useEffect(() => {
-    const initialPrompt = location.state?.prompt;
-
-    if (initialPrompt && !hasAutoSubmitted.current) {
-      hasAutoSubmitted.current = true;
-      setPrompt(initialPrompt);
-    }
-  }, [location.state]);
-
-  useEffect(() => {
-    if (hasAutoSubmitted.current && prompt.trim()) {
-      onSubmit();
-
-      console.log("print")
-    }
-  }, [prompt, onSubmit]);
-
-  useEffect(() => {
-    if (hasAutoSubmitted.current) {
-      navigate(location.pathname, { replace: true, state: {} });
-    }
-  }, [navigate, location.pathname]);
+    postMessage(id, finalPrompt);
+    setPrompt("");
+  }, [id, prompt, postMessage]);
 
   return (
     <Allotment separator className="w-full">
-      <Allotment.Pane minSize={400}>
+      <Allotment.Pane minSize={400} preferredSize={400} >
         <div className="flex flex-col h-full">
           <SiteHeader />
 
@@ -130,30 +67,19 @@ function Playground() {
             className="flex-1 overflow-y-auto min-h-0 scroll-smooth p-4 relative"
           >
             <div className="max-w-3xl mx-auto space-y-4">
-              {chat.messages?.map((message, i) => (
-                <div key={message.id} className="flex items-start gap-3">
-                  {message.type === 'ai' ? (
-                    <Avatar className="h-6 w-6">
-                      <AvatarFallback className="bg-white text-black">
-                        <Snail className="w-4 h-4" />
-                      </AvatarFallback>
-                    </Avatar>
-                  ) : (
-                    <Avatar className="h-6 w-6 rounded-full">
-                      <AvatarImage src={user.avatar} alt={user.name} />
-                      <AvatarFallback>CN</AvatarFallback>
-                    </Avatar>
+              {chat.messages?.map((message) => (
+                <div
+                  key={message.id}
+                  className={clsx(
+                    "flex w-full gap-2 items-center",
+                    message.type === "user" ? "justify-end" : ""
                   )}
-                  <div className="rounded-xl px-4 py-2 bg-background max-w-prose">
+                >
+                  <div className={clsx({ "border bg-background": message.type == "user" }, "rounded-xl px-4 py-2")}>
                     <p className="whitespace-pre-wrap text-sm leading-relaxed">
                       {message.content}
                     </p>
                   </div>
-                  {isLoading && i === chat.messages.length - 1 && (
-                    <div className="mt-2">
-                      <SyncLoader color="#ccc" size={6} />
-                    </div>
-                  )}
                 </div>
               ))}
             </div>
@@ -186,8 +112,8 @@ function Playground() {
         </div>
       </Allotment.Pane>
 
-      <Allotment.Pane minSize={500}>
-        <CodeEditor code={code} setCode={setCode} />
+      <Allotment.Pane minSize={600}>
+        <CodeEditor code={chat.code} setCode={() => { }} />
       </Allotment.Pane>
     </Allotment>
   );

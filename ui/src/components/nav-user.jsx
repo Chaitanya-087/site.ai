@@ -27,7 +27,6 @@ import {
     useSidebar,
 } from "@/components/ui/sidebar"
 import { useClerk } from "@clerk/clerk-react"
-// import { useAuth } from "@/hooks/use-auth"
 import { useAuthStore } from "@/store/auth-store"
 
 export function NavUser() {

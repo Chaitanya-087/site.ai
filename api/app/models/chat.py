@@ -17,6 +17,9 @@ class Prompt(BaseModel):
     """
     input: str
 
+class CreateChatRequest(BaseModel):
+    name: str
+    
 class RenameRequest(BaseModel):
     name: str
     

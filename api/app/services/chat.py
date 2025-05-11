@@ -17,9 +17,9 @@ async def get_chats_by_user_id(user_id: str) -> all_chats:
         raise HTTPException(status_code=404, detail="No chats found for this user")
     return all_chats(resp)
 
-async def create_chat_by_user_id(user_id: str) -> basic_chat:
+async def create_chat_by_user_id(user_id: str, name="New Chat") -> basic_chat:
     """Create a new chat by user ID."""
-    chat = Chat(userId=user_id)
+    chat = Chat(userId=user_id, name=name)
     resp = chatsCollection.insert_one(chat.model_dump())
     return basic_chat({"_id": resp.inserted_id, **chat.model_dump()})
 
@@ -80,10 +80,24 @@ async def post_message_by_chat_id(prompt: Prompt, chat_id: str) -> dict:
         "$push": {
             "messages": {"$each": [user_message.model_dump(), ai_message.model_dump()]}
         },
-        "$set": {"code": code.model_dump()}
+        "$set": {}
     }
+
+    # Update individual code fields only if non-empty
+    if code.html.strip():
+        update_data["$set"]["code.html"] = code.html
+    if code.css.strip():
+        update_data["$set"]["code.css"] = code.css
+    if code.js.strip():
+        update_data["$set"]["code.js"] = code.js
+
+    # Rename the chat if it's still "New Chat"
     if chat.get("name") == "New Chat":
         update_data["$set"]["name"] = prompt.input
+
+    # If $set is empty, remove it to avoid MongoDB error
+    if not update_data["$set"]:
+        del update_data["$set"]
 
     result = chatsCollection.update_one(
         {"_id": ObjectId(chat_id)},
@@ -93,11 +107,9 @@ async def post_message_by_chat_id(prompt: Prompt, chat_id: str) -> dict:
 
     if result.matched_count == 0:
         raise HTTPException(status_code=404, detail="Chat not found")
-    
-    message = Message(content=response['explanation'], type=MessageType.AI)
-    code = Code(html=response['html'], css=response['css'], js=response['js'])
-    
+
     return {
-        "message": message.model_dump(),
+        "name": update_data.get("$set", {}).get("name", chat.get("name")),
+        "message": ai_message.model_dump(),
         "code": code.model_dump()
     }

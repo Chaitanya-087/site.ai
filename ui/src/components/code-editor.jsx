@@ -2,8 +2,9 @@ import { useEffect, useState } from 'react';
 import PropTypes from 'prop-types';
 import Editor, { useMonaco } from '@monaco-editor/react';
 import { Button } from '@/components/ui/button';
-import { Code } from 'lucide-react';
+import { Code, Rows2 } from 'lucide-react';
 import { useTheme } from '../hooks/use-theme';
+import { Separator } from './ui/separator';
 
 function RenderEditor({ language, code, onChange, theme }) {
     const monaco = useMonaco();
@@ -104,7 +105,7 @@ function CodeEditor({ code, setCode }) {
                 <iframe
                     srcDoc={srcDoc}
                     title="Live Preview"
-                    sandbox="allow-scripts"
+                    sandbox="allow-scripts allow-same-origin"
                     className="w-full h-full border-none bg-white"
                 />
             ),
@@ -119,25 +120,26 @@ function CodeEditor({ code, setCode }) {
         const timeout = setTimeout(() => {
             const htmlContent = `
                 <!DOCTYPE html>
-                <html lang="en">
-                <head>
-                    <meta charset="UTF-8">
-                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                    <title>Preview</title>
-                    <style>
-                        * {
-                            margin: 0;
-                            padding: 0;
-                            box-sizing: border-box;
-                        }
-                    </style>
-                    <style>${code.css}</style>
-                </head>
-                <body>
-                    ${code.html}
-                    <script>${code.js}</script>
-                </body>
-                </html>
+                    <html lang="en">
+                        <head>
+                            <meta charset="UTF-8" />
+                            <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+                            <base target="_blank" />
+                            <script src="https://cdn.tailwindcss.com"></script>
+                            <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.13.0/gsap.min.js"></script> 
+                            <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.20.1/cdn/themes/light.css" />
+                            <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.20.1/cdn/themes/dark.css" />
+                            <script type="module" src="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.20.1/cdn/shoelace-autoloader.js"></script>
+                            <style>${code.css}</style>
+                            <title>Preview</title>
+                        </head>
+                        <body>
+                            ${code.html}
+                            <script>
+                                ${code.js}
+                            </script>
+                        </body>
+                    </html>
             `;
             setSrcDoc(htmlContent);
         }, 250);
@@ -155,24 +157,54 @@ function CodeEditor({ code, setCode }) {
     return (
         <div className="flex flex-col h-screen w-full">
             {/* Header */}
-            <div className="flex items-center justify-between h-12 shadow border-b px-2">
+            <div className="flex items-center h-12 shadow border-b px-2">
                 <Button variant="ghost" size="icon" className="w-7 h-7">
-                    <Code className="w-6 h-5" />
+                    <Code className="w-6 h-6" />
                 </Button>
+                <Separator
+                    orientation="vertical"
+                    className="mx-2 data-[orientation=vertical]:h-4"
+                />
 
-                <div className="flex gap-2">
-                    {keys.map((key) => (
-                        <Button
-                            key={key}
-                            variant={activeTab === key ? 'default' : 'ghost'}
-                            size="sm"
-                            className="capitalize"
-                            onClick={() => setActiveTab(key)}
-                        >
-                            {key}
-                        </Button>
-                    ))}
+                <div className="flex justify-between w-full items-center px-1">
+                    <div className="flex gap-1 items-center">
+                        {keys.filter(key => key !== 'preview').map((key, index) => (
+                            <div key={key} className="flex items-center">
+                                <button
+                                    onClick={() => setActiveTab(key)}
+                                    className={`px-3 py-1 rounded-full transition-all duration-200 text-sm
+                        ${activeTab === key
+                                            ? "bg-gradient-to-r from-blue-500 to-indigo-500 text-white font-semibold shadow-md"
+                                            : "hover:bg-muted text-muted-foreground"
+                                        }
+                    `}
+                                >
+                                    {key}
+                                </button>
+                                {index < keys.length - 2 && (
+                                    <Separator
+                                        orientation="vertical"
+                                        className="h-4 w-px bg-border mx-1"
+                                    />
+                                )}
+                            </div>
+                        ))}
+                    </div>
+
+                    <button
+                        onClick={() => setActiveTab('preview')}
+                        className={`p-2 rounded-full transition-all duration-200
+            ${activeTab === 'preview'
+                                ? "bg-gradient-to-r from-blue-500 to-indigo-500  text-white font-semibold shadow-md"
+                                : "hover:bg-muted text-muted-foreground"
+                            }
+        `}
+                    >
+                        <Rows2 className="w-4 h-4" />
+                    </button>
                 </div>
+
+
             </div>
 
             <div className="flex-1 bg-[#1a1a1a]">

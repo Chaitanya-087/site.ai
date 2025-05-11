@@ -3,25 +3,25 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Send } from "lucide-react";
 import { SiteHeader } from "@/components/site-header";
-import { useAuth } from "@/hooks/use-auth";
 import { useNavigate } from "react-router-dom";
+import { useChatStore } from "@/store/chat-store";
+
+const NAME = "New Chat";
 
 function Home() {
-    const { currentUser } = useAuth();
     const navigate = useNavigate();
     const [prompt, setPrompt] = useState("");
+    const { createChat, postMessage } = useChatStore();
+    const [name, setName] = useState(NAME);
 
     const onSubmit = async () => {
-        const res = await fetch(`http://localhost:8080/chats/users/${currentUser?.id}`, {
-            method: 'POST'
-        })
-        const data = await res.json();
-        if (data["id"]) {
-            navigate(`/${data["id"]}`, {
-                state: {
-                    prompt: prompt
-                }
-            })
+        if (!prompt.trim()) return;
+
+        const chatId = await createChat(name);
+
+        if (chatId) {
+            navigate(`/${chatId}`);
+            await postMessage(chatId, prompt);
         }
     }
 
@@ -34,12 +34,12 @@ function Home() {
                         What can I develop today?
                     </h1>
                     <div className="flex justify-center items-center space-x-2 border rounded-full h-14 px-2">
-                        <Input 
-                            placeholder="Start typing your idea..." className="h-full border-none focus-visible:ring-0" 
-                            value={prompt} 
-                            onChange={(e) => setPrompt(e.target.value)} 
-                            
-                            onKeyDown={(e) => e.key === 'Enter' && onSubmit()}    
+                        <Input
+                            placeholder="Start typing your idea..." className="h-full border-none focus-visible:ring-0"
+                            value={prompt}
+                            onChange={(e) => setPrompt(e.target.value)}
+
+                            onKeyDown={(e) => e.key === 'Enter' && onSubmit()}
                         />
                         <Button className="rounded-full size-[40px]" onClick={onSubmit} >
                             <Send />

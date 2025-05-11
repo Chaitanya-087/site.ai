@@ -33,33 +33,43 @@ def get_redis_history(session_id: str):
     return RedisChatMessageHistory(session_id, redis_url=REDIS_URL)
 
 # model
-model = ChatGoogleGenerativeAI(model="gemini-1.5-flash",
+model = ChatGoogleGenerativeAI(model="gemini-2.0-flash",
                                 generation_config=GENERATION_CONFIG, api_key=API_KEY)
 
 # Parser
 parser = JsonOutputParser(pydantic_object=Response)
 
 # prompt
+from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
+
 prompt = ChatPromptTemplate.from_messages(
     [
         (
             "system",
-            "You are a web developer. Always respond with valid JSON in this format:\n"
-            "include only code inside body tag. "
+            "You are a helpful and friendly web developer. Always respond in valid JSON format:\n"
             "{{\n"
             "  'html': '',\n"
             "  'css': '',\n"
             "  'js': '',\n"
             "  'explanation': ''\n"
-            "}}\n"
-            "The 'explanation' field should contain only a description of the code you are currently adding in 'html', 'css', and 'js'. "
-            "If only an explanation is requested, leave 'html', 'css', and 'js' as empty strings. "
-            "Do not include any additional text outside of this JSON format."
+            "}}\n\n"
+            "Rules:\n"
+            "- Always use **Tailwind CSS classes** for styling. Avoid raw CSS unless necessary.\n"
+            "- Use **GSAP** (GreenSock Animation Platform) for animations in the `js` section.\n"
+            "- JS code must be **suitable for embedding in a <script> tag**. Never use `import`, `require`, or module syntax.\n"
+            "- If the user gives a casual input (like 'hi', 'thanks', etc.), return the JSON with only the 'explanation'.\n"
+            "- If the user asks to update only part of the code (e.g., just JS), keep the rest unchanged.\n"
+            "- The explanation should reflect only the current change or response.\n"
+            "- keep the explanation concise and relevant to the user's request.\n"
+            "- keep other sections (html, css, js) as-is unless explicitly asked to change them.\n"
+            "- use shoelace web components whenever needed.\n"
         ),
         MessagesPlaceholder(variable_name="history"),
         ("user", "{input}"),
     ]
 )
+
+
 
 # chain
 chain = prompt | model
