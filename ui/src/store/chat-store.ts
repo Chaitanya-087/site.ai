@@ -47,6 +47,7 @@ interface ChatStore {
     selectedChat: ChatWithUI;
     isLoading: boolean;
     error: string | null;
+    clear: () => void;
     getChats: () => Promise<void>;
     deleteChat: (chatId: string) => Promise<void>;
     renameChat: (chatId: string, name: string) => Promise<void>;
@@ -72,6 +73,13 @@ const useChatStore = create<ChatStore>((set, get) => ({
     selectedChat: defaultChat,
     isLoading: false,
     error: null,
+    clear: () => {
+        set({
+            selectedChat: defaultChat,
+            isLoading: false,
+            error: null
+        });
+    },
     getChats: async () => {
         set({ isLoading: true, error: null });
         const userId = sessionStorage.getItem("userId");

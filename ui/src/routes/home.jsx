@@ -11,13 +11,12 @@ const NAME = "New Chat";
 function Home() {
     const navigate = useNavigate();
     const [prompt, setPrompt] = useState("");
-    const { createChat, postMessage } = useChatStore();
-    const [name, setName] = useState(NAME);
+    const { createChat, postMessage, clear } = useChatStore();
 
     const onSubmit = async () => {
         if (!prompt.trim()) return;
-
-        const chatId = await createChat(name);
+        clear();
+        const chatId = await createChat(NAME);
 
         if (chatId) {
             navigate(`/${chatId}`);

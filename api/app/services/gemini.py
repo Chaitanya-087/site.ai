@@ -53,7 +53,7 @@ prompt = ChatPromptTemplate.from_messages(
             "  'js': '',\n"
             "  'explanation': ''\n"
             "}}\n\n"
-            "Rules:\n"
+            "strictly follow below rules:\n"
             "- Always use **Tailwind CSS classes** for styling. Avoid raw CSS unless necessary.\n"
             "- Use **GSAP** (GreenSock Animation Platform) for animations in the `js` section.\n"
             "- JS code must be **suitable for embedding in a <script> tag**. Never use `import`, `require`, or module syntax.\n"

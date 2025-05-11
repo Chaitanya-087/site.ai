@@ -37,7 +37,7 @@ export function NavChats() {
     const { isMobile } = useSidebar();
     const [newName, setNewName] = useState();
     const [openDialogId, setOpenDialogId] = useState();
-    const { renameChat, deleteChat, isLoading, chats, getChats } = useChatStore();
+    const { renameChat, deleteChat, isLoading, chats, getChats, clear } = useChatStore();
     const [openDropdownId, setOpenDropdownId] = useState(null);
 
     useEffect(() => {
@@ -46,6 +46,7 @@ export function NavChats() {
 
     const handleDeleteChat = (chatId) => {
         deleteChat(chatId);
+        clear();
         navigate("/");
     }
 
@@ -106,7 +107,7 @@ export function NavChats() {
                                                         e.stopPropagation();
                                                         setOpenDropdownId(chat.id);
                                                     }}>
-                                                    <MoreHorizontal size={8}/>
+                                                    <MoreHorizontal size={8} />
                                                 </Button>
                                             </DropdownMenuTrigger>
                                             <DropdownMenuContent
