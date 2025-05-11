@@ -24,7 +24,7 @@ log_error() {
 # Check if Python virtual environment exists
 if [[ ! -d ".venv" ]]; then
   log_info "Creating Python virtual environment..."
-  python3 -m venv .venv
+  python3.9 -m venv .venv            
   if [[ $? -ne 0 ]]; then
     log_error "Failed to create Python virtual environment. Please ensure Python 3.9 is installed."
     exit 1
