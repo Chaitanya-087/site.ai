@@ -67,9 +67,9 @@ function Playground() {
             className="flex-1 overflow-y-auto min-h-0 scroll-smooth p-4 relative"
           >
             <div className="max-w-3xl mx-auto space-y-4">
-              {chat.messages?.map((message) => (
+              {chat.messages?.map((message,index) => (
                 <div
-                  key={message.id}
+                  key={`${message.id}-${index}`}
                   className={clsx(
                     "flex w-full gap-2 items-center",
                     message.type === "user" ? "justify-end" : ""
