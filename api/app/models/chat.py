@@ -6,6 +6,13 @@ from typing import List, Optional
 from enum import Enum
 from pydantic import BaseModel, Field
 
+class Token(BaseModel):
+    userId: str
+    token: str
+
+class TokenRequest(BaseModel):
+    token: str
+
 class Prompt(BaseModel):
     """Represents a prompt for the AI model to generate a response.
 

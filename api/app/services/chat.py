@@ -2,13 +2,52 @@
 from fastapi import HTTPException
 from bson import ObjectId
 
-from ..config.mongo import chatsCollection
+from ..config.mongo import chatsCollection,tokensCollection
 
 from ..schemas.chat import all_chats,basic_chat,detailed_chat
 
-from ..models.chat import Chat,Prompt,Code, MessageType, Message
+from ..models.chat import Chat,Prompt,Code, MessageType, Message, Token
 
 from .gemini import get_ai_response
+
+from Crypto.PublicKey import RSA
+from Crypto.Cipher import PKCS1_OAEP
+from base64 import b64encode, b64decode
+
+public_key = RSA.import_key(open('public.pem').read())
+private_key = RSA.import_key(open('private.pem').read())
+
+async def get_token_by_user_id(user_id: str) -> dict:
+    record = tokensCollection.find_one({"userId": user_id})
+    if not record or "token" not in record:
+        return {"token": ""}
+
+    encrypted_token_b64 = record["token"]
+    encrypted_token = b64decode(encrypted_token_b64)
+
+    try:
+        decrypted_token = PKCS1_OAEP.new(private_key).decrypt(encrypted_token).decode("utf-8")
+        return {"token": decrypted_token}
+    except Exception as e:
+        print("Failed to decrypt token:", e)
+        return {"token": ""}
+
+async def save_token_by_user_id(user_id: str,token: str) -> dict:
+    """Encrypt the token using the public key and save it in the database."""
+    encrypted_token = PKCS1_OAEP.new(public_key).encrypt(token.encode("utf-8"))
+    encrypted_token_b64 = b64encode(encrypted_token).decode("utf-8")
+    
+    existing_token = tokensCollection.find_one({"userId": user_id})
+    if existing_token is None:
+        token_obj = Token(userId=user_id, token=encrypted_token_b64)
+        tokensCollection.insert_one(token_obj.model_dump())
+    else:
+        tokensCollection.update_one(
+            {"userId": user_id},
+            {"$set": {"token": encrypted_token_b64}}
+        )
+
+    return {"message": "Token saved successfully."}
 
 async def get_chats_by_user_id(user_id: str) -> all_chats:
     """Get all chats by user ID."""
@@ -53,7 +92,7 @@ async def delete_chat_by_id(chat_id: str) -> dict:
         raise HTTPException(status_code=404, detail="Chat not found")
     return {"message": "Chat deleted successfully."}
 
-async def post_message_by_chat_id(prompt: Prompt, chat_id: str) -> dict:
+async def post_message_by_chat_id(prompt: Prompt, chat_id: str, user_id: str) -> dict:
     """
     Post a message in a chat by chat ID.
 
@@ -64,10 +103,25 @@ async def post_message_by_chat_id(prompt: Prompt, chat_id: str) -> dict:
     Returns:
         Response: The AI-generated response, including the explanation and any code snippets.
     """
+    record = tokensCollection.find_one({"userId": user_id})
+    if not record or "token" not in record:
+        raise HTTPException(status_code=401, detail="Unauthorized: No token found")
+
+    encrypted_token_b64 = record["token"]
+    encrypted_token = b64decode(encrypted_token_b64)
+    
+    decrypted_token = PKCS1_OAEP.new(private_key).decrypt(encrypted_token).decode("utf-8")
+    
+    if not decrypted_token:
+        raise HTTPException(status_code=401, detail="Unauthorized: Invalid token")
+    
     if not ObjectId.is_valid(chat_id):
         raise HTTPException(status_code=400, detail="Invalid chat ID")
 
-    response = await get_ai_response(prompt.input, chat_id)
+    try:
+        response = await get_ai_response(prompt.input, chat_id, decrypted_token)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Internal Server Error: AI response failed due to invalid token") from e
     user_message = Message(content=prompt.input, type=MessageType.USER)
     ai_message = Message(content=response['explanation'], type=MessageType.AI)
     code = Code(html=response['html'], css=response['css'], js=response['js'])

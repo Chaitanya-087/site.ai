@@ -8,13 +8,14 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.runnables.history import RunnableWithMessageHistory
 from langchain_core.output_parsers import JsonOutputParser
-
+from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_redis import RedisChatMessageHistory
 
 from ..models.chat import Response
 
 DIR = os.path.dirname(os.path.realpath(__file__))
 ENV_PATH = os.path.abspath(os.path.join(DIR, '..', '..', '.env.development.local'))
+
 config = dotenv_values(ENV_PATH)
 
 API_KEY = config.get("GEMINI_API_KEY")
@@ -32,16 +33,7 @@ def get_redis_history(session_id: str):
     """Return the chat history for a specific session ID."""
     return RedisChatMessageHistory(session_id, redis_url=REDIS_URL)
 
-# model
-model = ChatGoogleGenerativeAI(model="gemini-2.0-flash",
-                                generation_config=GENERATION_CONFIG, api_key=API_KEY)
-
-# Parser
-parser = JsonOutputParser(pydantic_object=Response)
-
 # prompt
-from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
-
 prompt = ChatPromptTemplate.from_messages(
     [
         (
@@ -70,21 +62,27 @@ prompt = ChatPromptTemplate.from_messages(
     ]
 )
 
-
-
 # chain
-chain = prompt | model
-
-runnableWithHistory = RunnableWithMessageHistory(
-    chain,
-    get_redis_history,
-    input_messages_key="input",
-    history_messages_key="history",
-)
-
-async def get_ai_response(question: str, session_id: str = "default_id") -> Response:
+async def get_ai_response(question: str, session_id: str = "default_id", token: str = API_KEY) -> Response:
     """Get a response from the Gemini model."""
     try:
+        # Parser
+        parser = JsonOutputParser(pydantic_object=Response)
+        
+        # model
+        model = ChatGoogleGenerativeAI(model="gemini-2.0-flash",
+                                generation_config=GENERATION_CONFIG, api_key=token)
+        
+        # chain
+        chain = prompt | model
+        
+        runnableWithHistory = RunnableWithMessageHistory(
+            chain,
+            get_redis_history,
+            input_messages_key="input",
+            history_messages_key="history",
+        )
+        
         res = runnableWithHistory.invoke(
             {"input": question},
             config={"configurable": {"session_id": session_id}},
@@ -100,14 +98,13 @@ async def get_ai_response(question: str, session_id: str = "default_id") -> Resp
         print("An error occurred:", e)
         raise e
 
-# python3 -m api.app.services.gemini
 # driver code
-# if __name__ == "__main__":
-#     import asyncio
+if __name__ == "__main__":
+    import asyncio
 
-#     async def main():
-#         """driver code"""
-#         response = await get_ai_response("add footer to it", "test_session_id")
-#         print(response['explanation'])
+    async def main():
+        """driver code"""
+        response = await get_ai_response("add footer to it", "test_session_id")
+        print(response['explanation'])
 
-#     asyncio.run(main())
+    asyncio.run(main())

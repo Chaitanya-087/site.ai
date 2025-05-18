@@ -29,10 +29,14 @@ function Playground() {
   }, [chat.messages]);
 
   useEffect(() => {
-    if (error) {
-      toast.error(error);
-    }
-  }, [error])
+    if (!error?.message) return;
+    toast.error(error.message, {
+      action: {
+        label: "undo",
+        onClick: () => console.log("Undo"),
+      },
+    });
+  }, [error?.message, error?.timestamp]);
 
   const scrollToBottom = () => {
     if (chatAreaRef.current) {
@@ -47,10 +51,8 @@ function Playground() {
   };
 
   const onSubmit = useCallback((customPrompt) => {
-    const finalPrompt = customPrompt ?? prompt;
-    if (!finalPrompt.trim()) return;
-
-    postMessage(id, finalPrompt);
+    const finalPrompt = customPrompt || prompt;
+    postMessage(id, finalPrompt?.trim());
     setPrompt("");
   }, [id, prompt, postMessage]);
 
@@ -67,7 +69,7 @@ function Playground() {
             className="flex-1 overflow-y-auto min-h-0 scroll-smooth p-4 relative"
           >
             <div className="max-w-3xl mx-auto space-y-4">
-              {chat.messages?.map((message,index) => (
+              {chat.messages?.map((message, index) => (
                 <div
                   key={`${message.id}-${index}`}
                   className={clsx(
@@ -104,7 +106,7 @@ function Playground() {
                 onChange={(e) => setPrompt(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && onSubmit()}
               />
-              <Button className="rounded-full size-[40px]" onClick={onSubmit}>
+              <Button className="rounded-full size-[40px]" onClick={() => onSubmit()}>
                 <Send />
               </Button>
             </div>

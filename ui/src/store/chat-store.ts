@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { produce } from 'immer';
+import { getErrorMessageFromResponse } from './util';
 
 const API = 'http://localhost:8080';
 
@@ -7,6 +8,15 @@ interface Message {
     id: string;
     type: "ai" | "user";
     content: string;
+}
+
+interface ErrorState {
+    message: string;
+    timestamp: number;
+}
+
+interface TokenResponse {
+    token: string;
 }
 
 interface Code {
@@ -46,7 +56,8 @@ interface ChatStore {
     chats: ChatWithUI[];
     selectedChat: ChatWithUI;
     isLoading: boolean;
-    error: string | null;
+    error: ErrorState | null;
+    token: string | null;
     clear: () => void;
     getChats: () => Promise<void>;
     deleteChat: (chatId: string) => Promise<void>;
@@ -54,6 +65,8 @@ interface ChatStore {
     createChat: (name: string) => Promise<string | null>;
     setSelectedChat: (chatId: string) => Promise<void>;
     postMessage: (chatId: string, prompt: string) => Promise<void>;
+    getToken: () => Promise<void>;
+    saveToken: (token: string) => Promise<void>;
 }
 
 const defaultChat: ChatWithUI = chatDAO({
@@ -68,52 +81,106 @@ const defaultChat: ChatWithUI = chatDAO({
     }
 });
 
+const setError = (set: any, err: any) => {
+    const message = typeof err === "string" ? err : err.message;
+    console.log(message);
+    set({
+        error: {
+            message,
+            timestamp: Date.now(),
+        },
+    });
+};
+
 const useChatStore = create<ChatStore>((set, get) => ({
     chats: [],
     selectedChat: defaultChat,
     isLoading: false,
     error: null,
+    token: "",
+
     clear: () => {
-        set({
-            selectedChat: defaultChat,
-            isLoading: false,
-            error: null
-        });
+        set({ selectedChat: defaultChat, isLoading: false });
+        setError(set, "")
     },
-    getChats: async () => {
-        set({ isLoading: true, error: null });
+
+    saveToken: async (token: string) => {
+        const userId = sessionStorage.getItem("userId");
+        if (!userId) {
+            setError(set, "User not found");
+        }
+
+        try {
+            const res = await fetch(`${API}/chats/users/${userId}/token`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ token }),
+            });
+
+            if (!res.ok) throw new Error(await getErrorMessageFromResponse(res));
+
+            set({ token });
+        } catch (err: any) {
+            setError(set, err);
+        }
+    },
+
+    getToken: async () => {
         const userId = sessionStorage.getItem("userId");
 
         if (!userId) {
-            set({ isLoading: false, error: "User not found." });
+            setError(set, "User not found");
+            return;
+        }
+
+        try {
+            const res = await fetch(`${API}/chats/users/${userId}/token`);
+
+            if (!res.ok) throw new Error(await getErrorMessageFromResponse(res));
+
+            const data: TokenResponse = await res.json();
+            set({ token: data.token });
+        } catch (err: any) {
+            setError(set, err);
+        }
+    },
+
+    getChats: async () => {
+        set({ isLoading: true });
+        const userId = sessionStorage.getItem("userId");
+
+        if (!userId) {
+            set({ isLoading: false });
+            setError(set, "User not found");
             return;
         }
 
         try {
             const res = await fetch(`${API}/chats/users/${userId}/all`);
-            if (!res.ok) throw new Error("Failed to fetch chats");
+            if (!res.ok) throw new Error(await getErrorMessageFromResponse(res));
 
             const data: Chat[] = await res.json();
-            const chats = data
-                .map(chatDAO)
-                .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+            const chats = data.map(chatDAO).sort((a, b) =>
+                new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+            );
 
             set({ chats, isLoading: false });
         } catch (err: any) {
-            set({ isLoading: false, error: err.message || "Unknown error" });
+            set({ isLoading: false });
+            setError(set, err);
         }
     },
 
     deleteChat: async (chatId: string) => {
         try {
             const res = await fetch(`${API}/chats/${chatId}`, { method: 'DELETE' });
-            if (!res.ok) throw new Error("Failed to delete chat");
+            if (!res.ok) throw new Error(await getErrorMessageFromResponse(res));
 
             set(produce((state: ChatStore) => {
                 state.chats = state.chats.filter(chat => chat.id !== chatId);
             }));
         } catch (err: any) {
-            set({ error: err.message || "Unknown error while deleting chat" });
+            setError(set, err);
         }
     },
 
@@ -124,26 +191,24 @@ const useChatStore = create<ChatStore>((set, get) => ({
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ name }),
             });
-
-            if (!res.ok) throw new Error("Failed to rename chat");
+            if (!res.ok) throw new Error(await getErrorMessageFromResponse(res));
 
             set(produce((state: ChatStore) => {
                 const chat = state.chats.find(c => c.id === chatId);
-                if (chat) {
-                    chat.name = name;
-                } if (state.selectedChat.id === chatId) {
-                    state.selectedChat.name = name;
-                }
+                if (chat) chat.name = name;
+                if (state.selectedChat.id === chatId) state.selectedChat.name = name;
             }));
         } catch (err: any) {
-            set({ error: err.message || "Unknown error while renaming chat" });
+            setError(set, err);
         }
     },
 
     createChat: async (name: string) => {
         const userId = sessionStorage.getItem("userId");
+
         if (!userId) {
-            set({ error: "User not found" });
+            set({ isLoading: false });
+            setError(set, "User not found");
             return null;
         }
 
@@ -153,20 +218,16 @@ const useChatStore = create<ChatStore>((set, get) => ({
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ name }),
             });
-
-            if (!res.ok) throw new Error("Failed to create chat");
+            if (!res.ok) throw new Error(await getErrorMessageFromResponse(res));
 
             const data: Chat = await res.json();
             const newChat = chatDAO(data);
-
             set(produce((state: ChatStore) => {
                 state.chats.unshift(newChat);
-                state.error = null;
             }));
-
             return newChat.id;
         } catch (err: any) {
-            set({ error: err.message || "Unknown error while creating chat" });
+            setError(set, err);
             return null;
         }
     },
@@ -174,67 +235,70 @@ const useChatStore = create<ChatStore>((set, get) => ({
     setSelectedChat: async (chatId: string) => {
         try {
             const res = await fetch(`${API}/chats/${chatId}`);
-            if (!res.ok) throw new Error("Failed to fetch chat");
+            if (!res.ok) throw new Error(await getErrorMessageFromResponse(res));
+
             const data: Chat = await res.json();
-            set({ selectedChat: chatDAO(data) })
+            set({ selectedChat: chatDAO(data) });
         } catch (err: any) {
-            set({ error: err.message || "Unknown error while fetching chat" })
+            setError(set, err);
         }
     },
 
     postMessage: async (chatId: string, prompt: string) => {
-        set(produce((state: ChatStore) => {
-            if (!prompt.trim()) {
-                state.error = "Prompt is empty";
-                return;
-            }
+        const userId = sessionStorage.getItem('userId');
 
+        if (!userId) {
+            set({ isLoading: false });
+            setError(set, "User not found");
+            return;
+        }
+
+        if (!prompt.trim()) {
+            setError(set, "Prompt is empty");
+            return;
+        }
+
+        set(produce((state: ChatStore) => {
             state.selectedChat.messages.push(createMessage(prompt, "user"));
             const chat = state.chats.find(c => c.id === chatId);
-
-            if (!chat) {
-                state.error = `Chat with id ${chatId} not found`;
-                return;
+            if (chat) {
+                chat.isProcessing = true;
             }
-
-            chat.isProcessing = true;
         }));
 
         try {
-            const res = await fetch(`${API}/chats/${chatId}/messages`, {
+            const res = await fetch(`${API}/chats/${chatId}/messages/${userId}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ input: prompt }),
-            })
+            });
+
+            if (!res.ok) throw new Error(await getErrorMessageFromResponse(res));
+
             const data: Response = await res.json();
 
             set(produce((state: ChatStore) => {
-                state.selectedChat.messages.push(data.message)
-                if (data.code.css) {
-                    state.selectedChat.code.css = data.code.css;
-                } if (data.code.html) {
-                    state.selectedChat.code.html = data.code.html;
-                } if (data.code.js) {
-                    state.selectedChat.code.js = data.code.js;
-                }
-                state.selectedChat.name = data.name
+                state.selectedChat.messages.push(data.message);
+                if (data.code.css) state.selectedChat.code.css = data.code.css;
+                if (data.code.html) state.selectedChat.code.html = data.code.html;
+                if (data.code.js) state.selectedChat.code.js = data.code.js;
+                state.selectedChat.name = data.name;
+
                 const chat = state.chats.find(c => c.id === chatId);
-                chat.name = data.name;
-                if (!chat) state.error = `Chat with id ${chatId} not found`;
-
-                chat.isProcessing = false;
-            }))
-
+                if (chat) {
+                    chat.name = data.name;
+                    chat.isProcessing = false;
+                }
+            }));
         } catch (err: any) {
             set(produce((state: ChatStore) => {
                 const chat = state.chats.find(c => c.id === chatId);
                 if (chat) chat.isProcessing = false;
-                state.error = err.message || "Unknown Error";
             }));
+            setError(set, err);
+            console.log(err);
         }
     }
 }));
 
-export {
-    useChatStore
-};
+export { useChatStore };
