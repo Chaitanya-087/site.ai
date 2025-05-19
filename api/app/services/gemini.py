@@ -55,7 +55,7 @@ prompt = ChatPromptTemplate.from_messages(
             "- keep the explanation concise and relevant to the user's request.\n"
             "- keep other sections (html, css, js) as-is unless explicitly asked to change them.\n"
             "- use shoelace web components whenever needed.\n"
-            "- if any images are involved use online images.\n"
+            "- use online images where every it is needed.\n"
         ),
         MessagesPlaceholder(variable_name="history"),
         ("user", "{input}"),
