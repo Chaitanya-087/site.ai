@@ -1,5 +1,5 @@
-import { create } from 'zustand';
-import type { UserResource, Clerk } from '@clerk/types';
+import { create } from "zustand";
+import type { UserResource, Clerk } from "@clerk/types";
 
 interface User {
   id: string;
@@ -18,7 +18,7 @@ interface AuthStore {
 
 const formatUser = (user: UserResource): User => ({
   id: user.id,
-  name: `${user.firstName || ''} ${user.lastName || ''}`.trim(),
+  name: `${user.firstName || ""} ${user.lastName || ""}`.trim(),
   email: user.primaryEmailAddress?.emailAddress,
   avatar: user.imageUrl,
 });
@@ -30,15 +30,16 @@ const useAuthStore = create<AuthStore>((set) => ({
   setUserFromClerk: (clerk: Clerk) => {
     const currentUser = clerk.user;
     if (currentUser) {
-      sessionStorage.setItem("userId", currentUser.id)
+      sessionStorage.setItem("userId", currentUser.id);
       set({ user: formatUser(currentUser), isSignedIn: true });
     } else {
+      clerk;
       set({ user: null });
     }
   },
 
   openSignIn: (clerk: Clerk) => {
-    clerk.openSignIn({ redirectUrl: '/' });
+    clerk.openSignIn({ redirectUrl: "/" });
   },
 
   signOut: async (clerk: Clerk) => {

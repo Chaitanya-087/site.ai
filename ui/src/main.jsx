@@ -1,33 +1,63 @@
-import { StrictMode } from 'react'
-import { createRoot } from 'react-dom/client'
-import { BrowserRouter, Route, Routes } from 'react-router-dom'
-import { ClerkProvider, ClerkLoaded, ClerkLoading } from '@clerk/clerk-react'
+import React from "react";
+import { StrictMode } from "react";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { ThemeProvider } from "@/hooks/use-theme";
+import {
+  ClerkProvider,
+  ClerkLoading,
+  ClerkLoaded,
+  useUser,
+} from "@clerk/clerk-react";
+import App from "./App";
+import Playground from "./routes/playground";
+import Login from "./routes/login";
+import Home from "./routes/home";
 
-import Home from '@/routes/home.jsx'
-import Playground from '@/routes/playground.jsx'
+const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 
-import App from './App.jsx'
-import "allotment/dist/style.css"
-import './index.css'
+function AppRoutes() {
+  const { isSignedIn } = useUser();
 
-const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route
+          path="/"
+          element={
+            isSignedIn ? (
+              <App />
+            ) : (
+              <Navigate to="/login" replace /> // Redirect to login if not signed in
+            )
+          }
+        >
+          <Route index element={<Home />} />
+          <Route path=":id" element={<Playground />} />
+        </Route>
+        <Route path="/login" element={<Login />} />
+      </Routes>
+    </BrowserRouter>
+  );
+}
 
-createRoot(document.getElementById('root')).render(
-  <StrictMode>
-    <ClerkProvider publishableKey={PUBLISHABLE_KEY} afterSignOutUrl="/">
-      <ClerkLoading>
-        <div>Loading authentication...</div>
-      </ClerkLoading>
-      <ClerkLoaded>
-        <BrowserRouter>
-          <Routes>
-            <Route path='/' element={<App />}>
-              <Route index element={<Home />} />
-              <Route path=':id' element={<Playground />} />
-            </Route>
-          </Routes>
-        </BrowserRouter>
-      </ClerkLoaded>
-    </ClerkProvider>
-  </StrictMode>
-)
+function Root() {
+  return (
+    <StrictMode>
+      <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
+        <ClerkProvider
+          publishableKey={PUBLISHABLE_KEY}
+          afterSignOutUrl="/login"
+        >
+          <ClerkLoading>
+            <div>Loading authentication...</div>
+          </ClerkLoading>
+          <ClerkLoaded>
+            <AppRoutes />
+          </ClerkLoaded>
+        </ClerkProvider>
+      </ThemeProvider>
+    </StrictMode>
+  );
+}
+
+export default Root;
