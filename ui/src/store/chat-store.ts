@@ -2,8 +2,8 @@ import { create } from "zustand";
 import { produce } from "immer";
 import { getErrorMessageFromResponse } from "./util";
 
-// const API = "http://localhost:8080";
-const API = "https://px5sz4-8080.csb.app";
+const API = "http://localhost:8080";
+// const API = "https://px5sz4-8080.csb.app";
 
 interface Message {
   id: string;
