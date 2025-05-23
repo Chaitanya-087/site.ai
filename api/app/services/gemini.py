@@ -1,7 +1,7 @@
 """This module is used to interact with the Gemini model."""
 import json
 import os
-from dotenv import dotenv_values
+from dotenv import load_dotenv
 
 from langchain_google_genai import ChatGoogleGenerativeAI
 
@@ -10,24 +10,19 @@ from langchain_core.runnables.history import RunnableWithMessageHistory
 from langchain_core.output_parsers import JsonOutputParser
 from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
 
-
 from langchain_core.runnables.history import BaseChatMessageHistory
 from langchain_core.messages import BaseMessage
 import pickle
 from redis import Redis
 from typing import List
 
-
 from ..models.chat import Response
 
-DIR = os.path.dirname(os.path.realpath(__file__))
-ENV_PATH = os.path.abspath(os.path.join(DIR, '..', '..', '.env.development.local'))
+load_dotenv()
 
-config = dotenv_values(ENV_PATH)
-
-API_KEY = config.get("GEMINI_API_KEY")
-REDIS_URL = config.get("REDIS_URL") or 'redis://localhost:8009/0'
-REDIS_TOKEN = config.get("REDIS_TOKEN") or None
+API_KEY = os.environ.get("GEMINI_API_KEY")
+REDIS_URL = os.environ.get("REDIS_URL")
+REDIS_TOKEN = os.environ.get("REDIS_TOKEN")
 
 GENERATION_CONFIG = {
     "temperature": 2,
@@ -43,7 +38,6 @@ class UpstashCompatibleChatHistory(BaseChatMessageHistory):
 
     This avoids unsupported RediSearch commands like FT.INFO, FT.SEARCH, etc.
     """
-
     def __init__(self, session_id: str, redis_client: Redis):
         self.key = f"chat_history:{session_id}"
         self.redis = redis_client
@@ -72,7 +66,8 @@ class UpstashCompatibleChatHistory(BaseChatMessageHistory):
 
     def __len__(self) -> int:
         return self.redis.llen(self.key)
-# session history
+    
+# chat history
 def get_redis_history(session_id: str):
     redis_client = Redis(
     host="creative-dodo-16406.upstash.io",
@@ -111,7 +106,6 @@ prompt = ChatPromptTemplate.from_messages(
     ]
 )
 
-# chain
 async def get_ai_response(question: str, session_id: str = "default_id", token: str = API_KEY) -> Response:
     """Get a response from the Gemini model."""
     try:

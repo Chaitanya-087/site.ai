@@ -1,9 +1,9 @@
 import { create } from "zustand";
 import { produce } from "immer";
 import { getErrorMessageFromResponse } from "./util";
+import { meta } from "@eslint/js";
 
-const API = "http://localhost:8080";
-// const API = "https://px5sz4-8080.csb.app";
+const API: string = "https://site-ai.onrender.com";
 
 interface Message {
   id: string;
@@ -87,6 +87,7 @@ const defaultChat: ChatWithUI = chatDAO({
 const setError = (set: any, err: any) => {
   const message = typeof err === "string" ? err : err.message;
   console.log(message);
+  console.log(API);
   set({
     error: {
       message,

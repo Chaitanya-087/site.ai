@@ -2,15 +2,12 @@
 import os
 from pymongo import MongoClient
 from pymongo.errors import ConfigurationError
-from dotenv import dotenv_values
+from dotenv import load_dotenv
 
-DIR = os.path.dirname(os.path.realpath(__file__))
-ENV_PATH = os.path.abspath(os.path.join(DIR, '..', '..', '.env.development.local'))
-
-config = dotenv_values(ENV_PATH)
+load_dotenv()
 
 try:
-    URI = config.get("MONGO_URI")
+    URI = os.environ.get("MONGO_URI")
     client = MongoClient(URI or "mongodb://localhost:27017/")
 except ConfigurationError:
     print("MongoDB configuration error. Please check your connection string.")
