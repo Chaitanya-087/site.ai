@@ -19,4 +19,3 @@ chatsCollection = db["chats"]
 tokensCollection = db["tokens"]
 
 export = chatsCollection, tokensCollection
-
