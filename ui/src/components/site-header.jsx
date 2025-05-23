@@ -2,11 +2,12 @@ import { Separator } from "@/components/ui/separator"
 import { SidebarTrigger } from "@/components/ui/sidebar"
 import { ModeToggle } from "./mode-toggle"
 import { useChatStore } from "@/store/chat-store"
-import { useLocation } from "react-router-dom";
+import { useLocation, useParams } from "react-router-dom";
 
 export function SiteHeader() {
-    const { selectedChat } = useChatStore();
+    const { getHeaderName } = useChatStore();
     const location = useLocation();
+    const { id } = useParams();
 
     return (
         <header className="flex h-12 shrink-0 items-center gap-2 border-b transition-[width,height] ease-linear w-full">
@@ -16,7 +17,7 @@ export function SiteHeader() {
                     orientation="vertical"
                     className="mx-2 data-[orientation=vertical]:h-4"
                 />
-                <h1 className="text-base font-medium truncate">{location.pathname == '/' ? "Home" : selectedChat.name}</h1>
+                <h1 className="text-base font-medium truncate">{location.pathname == '/' ? "Home" : getHeaderName(id)}</h1>
 
                 <div className="ml-auto">
                     <ModeToggle />

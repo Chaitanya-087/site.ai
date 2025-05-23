@@ -51,7 +51,7 @@ const createMessage = (prompt: string, type: "ai" | "user") => ({
   content: prompt,
 });
 
-interface ChatWithUI extends ReturnType<typeof chatDAO> {}
+interface ChatWithUI extends ReturnType<typeof chatDAO> { }
 
 interface ChatStore {
   chats: ChatWithUI[];
@@ -60,6 +60,8 @@ interface ChatStore {
   error: ErrorState | null;
   token: string | null;
   clear: () => void;
+  getHeaderName: (id: string) => string;
+  chatIsProcessing: (id: string) => boolean;
   getChats: () => Promise<void>;
   deleteChat: (chatId: string) => Promise<void>;
   renameChat: (chatId: string, name: string) => Promise<void>;
@@ -136,8 +138,11 @@ const useChatStore = create<ChatStore>((set, get) => ({
   token: "",
 
   clear: () => {
-    set({ selectedChat: defaultChat, isLoading: false });
-    setError(set, "");
+    set({
+      selectedChat: defaultChat,
+      isLoading: false,
+      error: null,
+    });
   },
 
   saveToken: async (token: string) => {
@@ -162,6 +167,10 @@ const useChatStore = create<ChatStore>((set, get) => ({
     }
   },
 
+  chatIsProcessing: (id: string) => {
+    return get().chats.find(chat => chat.id === id)?.isProcessing;
+  },
+
   getToken: async () => {
     const userId = sessionStorage.getItem("userId");
 
@@ -179,6 +188,13 @@ const useChatStore = create<ChatStore>((set, get) => ({
     if (data) {
       set({ token: data.token });
     }
+  },
+
+  getHeaderName: (id: string) => {
+    if (!id) {
+      return ""
+    }
+    return get().chats.find(chat => chat.id === id)?.name;
   },
 
   getChats: async () => {

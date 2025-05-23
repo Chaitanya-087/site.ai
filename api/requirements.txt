@@ -8,3 +8,4 @@ langchain-community==0.2.16
 langchain-redis==0.0.3
 uvicorn==0.30.6
 pymongo==4.9.1
+pycryptodome==3.23.0

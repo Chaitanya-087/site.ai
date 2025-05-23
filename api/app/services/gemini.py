@@ -9,7 +9,14 @@ from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.runnables.history import RunnableWithMessageHistory
 from langchain_core.output_parsers import JsonOutputParser
 from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
-from langchain_redis import RedisChatMessageHistory
+
+
+from langchain_core.runnables.history import BaseChatMessageHistory
+from langchain_core.messages import BaseMessage
+import pickle
+from redis import Redis
+from typing import List
+
 
 from ..models.chat import Response
 
@@ -19,7 +26,9 @@ ENV_PATH = os.path.abspath(os.path.join(DIR, '..', '..', '.env.development.local
 config = dotenv_values(ENV_PATH)
 
 API_KEY = config.get("GEMINI_API_KEY")
-REDIS_URL = config.get("REDIS_URL")
+REDIS_URL = config.get("REDIS_URL") or 'redis://localhost:8009/0'
+REDIS_TOKEN = config.get("REDIS_TOKEN") or None
+
 GENERATION_CONFIG = {
     "temperature": 2,
     "top_p": 0.95,
@@ -28,10 +37,50 @@ GENERATION_CONFIG = {
     "response_mime_type": "application/json",
 }
 
+class UpstashCompatibleChatHistory(BaseChatMessageHistory):
+    """
+    Upstash-compatible chat message history using simple Redis list operations.
+
+    This avoids unsupported RediSearch commands like FT.INFO, FT.SEARCH, etc.
+    """
+
+    def __init__(self, session_id: str, redis_client: Redis):
+        self.key = f"chat_history:{session_id}"
+        self.redis = redis_client
+        self._messages = None  # Lazy loaded
+
+    def add_message(self, message: BaseMessage) -> None:
+        """Adds a new message to the Redis list."""
+        self.redis.rpush(self.key, pickle.dumps(message))
+        if self._messages is not None:
+            self._messages.append(message)
+
+    @property
+    def messages(self) -> List[BaseMessage]:
+        """Returns all stored messages for the session."""
+        if self._messages is None:
+            self._messages = [
+                pickle.loads(item)
+                for item in self.redis.lrange(self.key, 0, -1)
+            ]
+        return self._messages
+
+    def clear(self) -> None:
+        """Clears all stored messages for the session."""
+        self.redis.delete(self.key)
+        self._messages = []
+
+    def __len__(self) -> int:
+        return self.redis.llen(self.key)
 # session history
 def get_redis_history(session_id: str):
-    """Return the chat history for a specific session ID."""
-    return RedisChatMessageHistory(session_id, redis_url=REDIS_URL)
+    redis_client = Redis(
+    host="creative-dodo-16406.upstash.io",
+    port=6379,
+    password=REDIS_TOKEN,
+    ssl=True,
+    )
+    return UpstashCompatibleChatHistory(session_id, redis_client)
 
 # prompt
 prompt = ChatPromptTemplate.from_messages(

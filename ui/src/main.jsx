@@ -12,6 +12,8 @@ import './index.css'
 import Login from './routes/login.jsx'
 import { ThemeProvider } from './hooks/use-theme.jsx'
 import Signup from './routes/signup.jsx'
+// import { dark } from '@clerk/'
+
 
 const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY
 

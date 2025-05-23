@@ -15,9 +15,8 @@ function Home() {
 
     const onSubmit = async () => {
         if (!prompt.trim()) return;
-        clear();
+        clear()
         const chatId = await createChat(NAME);
-
         if (chatId) {
             navigate(`/${chatId}`);
             await postMessage(chatId, prompt);
