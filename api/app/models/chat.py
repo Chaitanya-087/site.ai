@@ -1,5 +1,3 @@
-"""This module contains the Pydantic models for the chat application, 
-including message structures, code snippets, and chat details."""
 from uuid import uuid4
 from datetime import datetime
 from typing import List, Optional
@@ -7,6 +5,15 @@ from enum import Enum
 from pydantic import BaseModel, Field
 
 class Token(BaseModel):
+    """Represents a user token for gemini llm model.
+
+    Args:
+        BaseModel: Pydantic's base class for data validation and settings management.
+
+    Attributes:
+        userId (str): Unique identifier for the user associated with the token.
+        token (str): The encrypted token string used for authentication or session management.
+    """
     userId: str
     token: str
 
@@ -25,9 +32,21 @@ class Prompt(BaseModel):
     input: str
 
 class CreateChatRequest(BaseModel):
+    """Represents a request to create a new chat session.
+    Args:
+        BaseModel: Pydantic's base class for data validation and settings management.
+    Attributes:
+        name (str): The name or title of the chat session to be created.
+    """
     name: str
     
 class RenameRequest(BaseModel):
+    """Represents a request to rename an existing chat session.
+    Args:
+        BaseModel: Pydantic's base class for data validation and settings management.
+    Attributes: 
+        name (str): The new name or title for the chat session.
+    """
     name: str
     
 class MessageType(str, Enum):

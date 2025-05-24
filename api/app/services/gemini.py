@@ -1,4 +1,3 @@
-"""This module is used to interact with the Gemini model."""
 import json
 import os
 from dotenv import load_dotenv
@@ -33,15 +32,10 @@ GENERATION_CONFIG = {
 }
 
 class UpstashCompatibleChatHistory(BaseChatMessageHistory):
-    """
-    Upstash-compatible chat message history using simple Redis list operations.
-
-    This avoids unsupported RediSearch commands like FT.INFO, FT.SEARCH, etc.
-    """
     def __init__(self, session_id: str, redis_client: Redis):
         self.key = f"chat_history:{session_id}"
         self.redis = redis_client
-        self._messages = None  # Lazy loaded
+        self._messages = None
 
     def add_message(self, message: BaseMessage) -> None:
         """Adds a new message to the Redis list."""
@@ -51,7 +45,6 @@ class UpstashCompatibleChatHistory(BaseChatMessageHistory):
 
     @property
     def messages(self) -> List[BaseMessage]:
-        """Returns all stored messages for the session."""
         if self._messages is None:
             self._messages = [
                 pickle.loads(item)
@@ -60,14 +53,12 @@ class UpstashCompatibleChatHistory(BaseChatMessageHistory):
         return self._messages
 
     def clear(self) -> None:
-        """Clears all stored messages for the session."""
         self.redis.delete(self.key)
         self._messages = []
 
     def __len__(self) -> int:
         return self.redis.llen(self.key)
     
-# chat history
 def get_redis_history(session_id: str):
     redis_client = Redis(
     host="creative-dodo-16406.upstash.io",
@@ -77,7 +68,6 @@ def get_redis_history(session_id: str):
     )
     return UpstashCompatibleChatHistory(session_id, redis_client)
 
-# prompt
 prompt = ChatPromptTemplate.from_messages(
     [
         (
@@ -109,14 +99,11 @@ prompt = ChatPromptTemplate.from_messages(
 async def get_ai_response(question: str, session_id: str = "default_id", token: str = API_KEY) -> Response:
     """Get a response from the Gemini model."""
     try:
-        # Parser
         parser = JsonOutputParser(pydantic_object=Response)
         
-        # model
         model = ChatGoogleGenerativeAI(model="gemini-2.0-flash",
                                 generation_config=GENERATION_CONFIG, api_key=token)
         
-        # chain
         chain = prompt | model
         
         runnableWithHistory = RunnableWithMessageHistory(
@@ -142,12 +129,11 @@ async def get_ai_response(question: str, session_id: str = "default_id", token: 
         raise e
 
 # driver code
-if __name__ == "__main__":
-    import asyncio
+# if __name__ == "__main__":
+#     import asyncio
 
-    async def main():
-        """driver code"""
-        response = await get_ai_response("add footer to it", "test_session_id")
-        print(response['explanation'])
+#     async def main():
+#         response = await get_ai_response("add footer to it", "test_session_id")
+#         print(response['explanation'])
 
-    asyncio.run(main())
+#     asyncio.run(main())
