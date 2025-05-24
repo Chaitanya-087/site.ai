@@ -14,7 +14,7 @@ uri = "mongodb://localhost:27017/"
 
 try:
     URI = os.environ.get("MONGO_URI")
-    client = MongoClient(URI, tls=True, tlsAllowInvalidCertificates=False)
+    client = MongoClient(URI, tls=True, tlsInsecure=True, serverSelectionTimeoutMS=5000, tlsAllowInvalidHostnames=True)
 except ConfigurationError:
     logger.error("MongoDB configuration error. Please check your connection string.")
     raise RuntimeError("Invalid MongoDB URI configuration.")
