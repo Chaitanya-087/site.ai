@@ -9,3 +9,4 @@ langchain-redis
 uvicorn
 pymongo
 pycryptodome
+certifi

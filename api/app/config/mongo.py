@@ -1,27 +1,40 @@
-"""This file is used to connect to the MongoDB database and export the chatsCollection, tokensCollection object. """
+"""Connect securely to MongoDB Atlas and export collections."""
 import os
 import logging
 from pymongo import MongoClient
-from pymongo.errors import ConfigurationError
-
+from pymongo.errors import ConfigurationError, ServerSelectionTimeoutError
+import certifi
 from dotenv import load_dotenv
 
-load_dotenv()
+load_dotenv()  # Only in local dev
 
 logger = logging.getLogger(__name__)
 
-uri = "mongodb://localhost:27017/"
+def verify_connection():
+    try:
+        client.admin.command("ping")
+        print("Connected to MongoDB successfully.")
+    except Exception as e:
+        print("MongoDB connection failed:", str(e))
 
 try:
-    URI = os.environ.get("MONGO_URI")
-    client = MongoClient(URI, tls=True, tlsInsecure=True, serverSelectionTimeoutMS=5000, tlsAllowInvalidHostnames=True)
-except ConfigurationError:
-    logger.error("MongoDB configuration error. Please check your connection string.")
-    raise RuntimeError("Invalid MongoDB URI configuration.")
+    uri = os.getenv("MONGO_URI")
+    if not uri:
+        raise ConfigurationError("MONGO_URI not found in environment variables.")
+    
+    client = MongoClient(
+        uri,
+        tls=True,
+        tlsCAFile=certifi.where(),
+        serverSelectionTimeoutMS=5000
+    )
+
+    verify_connection() 
+
+except (ConfigurationError, ServerSelectionTimeoutError) as e:
+    logger.error(f"MongoDB connection error: {e}")
+    raise RuntimeError("Failed to connect securely to MongoDB.")
 
 db = client["chat_db"]
-
 chatsCollection = db["chats"]
 tokensCollection = db["tokens"]
-
-export = chatsCollection, tokensCollection
