@@ -1,32 +1,33 @@
 {
-    "builds": [
-      {
-        "src": "./app/main.py",
-        "use": "@vercel/python"
-      }
-    ],
-    "routes": [
-      {
-        "src": "/(.*)",
-        "dest": "main.py"
-      }
-    ],
-    "functions": {
-        "api/**": {
-            "excludeFiles": [
-                "**/test_*.py",
-                "**/tests/**",
-                "**/__pycache__/**",
-                "**/*.pyc",
-                "**/*.pyo",
-                "**/*.pyd",
-                "**/.Dockerfile",
-                "**/.dockerignore",
-                "**/.gitignore",
-                "**/.env",
-                "**/.env.*",
-                "**/.venv"
-            ]
-        }
+  "version": 2,
+  "builds": [
+    {
+      "src": "app/main.py",
+      "use": "@vercel/python"
     }
- }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "app/main.py"
+    }
+  ],
+  "functions": {
+    "app/main.py": {
+      "excludeFiles": [
+        "**/test_*.py",
+        "**/tests/**",
+        "**/__pycache__/**",
+        "**/*.pyc",
+        "**/*.pyo",
+        "**/*.pyd",
+        "**/Dockerfile",
+        "**/.dockerignore",
+        "**/.gitignore",
+        "**/.env",
+        "**/.env.*",
+        "**/.venv"
+      ]
+    }
+  }
+}
