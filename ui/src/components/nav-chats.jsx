@@ -1,3 +1,6 @@
+import React, { useEffect, useRef, useState } from "react"
+import { NavLink, useLocation, useNavigate } from "react-router-dom"
+
 import {
     MoreHorizontal,
     Pencil,
@@ -11,7 +14,6 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-
 import {
     SidebarGroup,
     SidebarGroupLabel,
@@ -20,33 +22,61 @@ import {
     SidebarMenuItem,
     useSidebar,
 } from "@/components/ui/sidebar"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Button } from "@/components/ui/button"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 
 import clsx from "clsx"
-import { Input } from "./ui/input"
-import { Button } from "./ui/button"
-import React, { useEffect, useState } from "react"
+import { Loader } from "./loader"
+import { useTheme } from "@/hooks/use-theme"
+import { useChatsStore } from "@/store/chats-store"
+import { SpinnerCircularFixed } from "spinners-react"
 import { useChatStore } from "@/store/chat-store"
-import { Label } from "@radix-ui/react-dropdown-menu"
-import { NavLink, useLocation, useNavigate } from "react-router-dom"
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "./ui/dialog"
-import { PulseLoader } from "react-spinners"
+import { toast } from 'sonner';
 
-export function NavChats() {
+
+export const NavChats = () => {
     const location = useLocation();
     const navigate = useNavigate();
     const { isMobile } = useSidebar();
     const [newName, setNewName] = useState();
     const [openDialogId, setOpenDialogId] = useState();
-    const { renameChat, deleteChat, isLoading, chats, getChats, clear } = useChatStore();
+    const { renameChat, deleteChat, chats, fetchChats, error } = useChatsStore();
+    const { isChatThinking } = useChatStore();
     const [openDropdownId, setOpenDropdownId] = useState(null);
+    const { theme } = useTheme();
+    const errorTimestampRef = useRef(null);
+    const [isLoading, setIsLoading] = useState(false);
+    const initRef = useRef(false);
 
     useEffect(() => {
-        getChats();
-    }, [getChats])
+        if (error && error.message && error.timestamp !== errorTimestampRef.current) {
+            toast.error(error.message, {
+                action: {
+                    label: "undo",
+                },
+            });
+            errorTimestampRef.current = error.timestamp;
+        }
+    }, [error]);
+
+    useEffect(() => {
+        const init = async () => {
+            setIsLoading(true);
+            await fetchChats();
+            setIsLoading(false);
+        }
+        if (initRef.current) {
+            init();
+        }
+        return () => {
+            initRef.current = true;
+        }
+    }, [fetchChats])
 
     const handleDeleteChat = (chatId) => {
         deleteChat(chatId);
-        clear();
         navigate("/");
     }
 
@@ -60,7 +90,7 @@ export function NavChats() {
             <SidebarGroup className="group-data-[collapsible=icon]:hidden">
                 <SidebarGroupLabel>Chats</SidebarGroupLabel>
                 <SidebarMenu>
-                    {isLoading ? <>Loading...</> :
+                    {isLoading ? <Loader /> :
                         chats.map((chat) => {
                             const isDropdownOpen = chat.id === openDropdownId;
                             const isActive = (location.pathname === `/${chat.id}`) || isDropdownOpen;
@@ -70,7 +100,7 @@ export function NavChats() {
                                     data-active={isActive ? "true" : undefined}
                                     className={clsx(
                                         "flex items-center hover:bg-muted hover:rounded-md",
-                                        { "bg-muted rounded-md": isActive }
+                                        { "bg-muted rounded-md font-bold": isActive }
                                     )}
                                 >
                                     <SidebarMenuButton asChild>
@@ -89,9 +119,9 @@ export function NavChats() {
                                         </NavLink>
                                     </SidebarMenuButton>
 
-                                    {chat.isProcessing ?
+                                    {isChatThinking(chat.id) ?
                                         <Button variant="ghost" className="px-2 py-1 flex focus-visible:ring-0 hover:bg-transparent">
-                                            <PulseLoader color="#ffffff" size={4} />
+                                            <SpinnerCircularFixed size={20} thickness={125} speed={100} color={theme == 'dark' ? "#ffffff" : "#000000"} secondaryColor={theme == 'dark' ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)"} />
                                         </Button>
                                         :
                                         <DropdownMenu open={openDropdownId === chat.id}

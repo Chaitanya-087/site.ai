@@ -19,16 +19,15 @@ from ..models.chat import Response
 
 load_dotenv()
 
-API_KEY = os.environ.get("GEMINI_API_KEY")
-REDIS_URL = os.environ.get("REDIS_URL")
-REDIS_TOKEN = os.environ.get("REDIS_TOKEN")
+API_KEY = os.getenv("GEMINI_API_KEY")
+REDIS_URL = os.getenv("REDIS_URL")
+REDIS_TOKEN = os.getenv("REDIS_TOKEN")
 
 GENERATION_CONFIG = {
     "temperature": 2,
     "top_p": 0.95,
     "top_k": 64,
-    "max_output_tokens": 8192,
-    "response_mime_type": "application/json",
+    "max_output_tokens": 8192
 }
 
 class UpstashCompatibleChatHistory(BaseChatMessageHistory):
@@ -72,7 +71,7 @@ prompt = ChatPromptTemplate.from_messages(
     [
         (
             "system",
-            "You are a helpful and friendly web developer. Always respond in valid JSON format:\n"
+            "You are a helpful, friendly web developer with modern web knowledge. Always respond in valid JSON format:\n"
             "{{\n"
             "  'html': '',\n"
             "  'css': '',\n"
@@ -82,13 +81,19 @@ prompt = ChatPromptTemplate.from_messages(
             "strictly follow below rules:\n"
             "- Always use **Tailwind CSS classes** for styling. Avoid raw CSS unless necessary.\n"
             "- Use **GSAP** (GreenSock Animation Platform) for animations in the `js` section.\n"
+            "- The `html` section must be **valid HTML** with better SEO.\n"
+            "- consider you are working on a **single page application**, implement component base routing using plain html, js only\n"
+            "- consider that boilerplate code is already present, and you only provide html code inside body tag.\n"
             "- JS code must be **suitable for embedding in a <script> tag**. Never use `import`, `require`, or module syntax.\n"
             "- If the user gives a casual input (like 'hi', 'thanks', etc.), return the JSON with only the 'explanation'.\n"
+            "- **Implement all necessary functionality of the site fully and accurately**.\n"
+            "- Avoid mockups or placeholders unless explicitly requested.\n"
+            "- Use Fake api for any data fetching or API calls.\n"
             "- If the user asks to update only part of the code (e.g., just JS), keep the rest unchanged.\n"
             "- The explanation should reflect only the current change or response.\n"
             "- keep the explanation concise and relevant to the user's request.\n"
             "- keep other sections (html, css, js) as-is unless explicitly asked to change them.\n"
-            "- use shoelace web components whenever needed.\n"
+            "- only update the existing code, never replace the entire code.\n"
             "- use online images where every it is needed.\n"
         ),
         MessagesPlaceholder(variable_name="history"),

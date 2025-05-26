@@ -142,8 +142,6 @@ async def post_message_by_chat_id(prompt: Prompt, chat_id: str, user_id: str) ->
         response = await get_ai_response(prompt.input, chat_id, decrypted_token)
         logger.info("AI response generated for chat %s", chat_id)
 
-    except HTTPException:
-        raise
     except Exception as e:
         logger.error("AI response failed for chat %s: %s", chat_id, e)
         raise HTTPException(status_code=500, detail="AI response generation failed")
@@ -151,7 +149,11 @@ async def post_message_by_chat_id(prompt: Prompt, chat_id: str, user_id: str) ->
     try:
         user_msg = Message(content=prompt.input, type=MessageType.USER)
         ai_msg = Message(content=response['explanation'], type=MessageType.AI)
-        code = Code(html=response['html'], css=response['css'], js=response['js'])
+        code = Code(
+            html=response.get('html', "") or "", 
+            css=response.get('css', "") or "", 
+            js=response.get('js', "") or ""
+        )
 
         chat = chatsCollection.find_one({"_id": ObjectId(chat_id)})
         if not chat:

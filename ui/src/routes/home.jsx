@@ -4,22 +4,21 @@ import { Button } from "@/components/ui/button";
 import { Send } from "lucide-react";
 import { SiteHeader } from "@/components/site-header";
 import { useNavigate } from "react-router-dom";
-import { useChatStore } from "@/store/chat-store";
+import { useChatsStore } from "@/store/chats-store";
 
 const NAME = "New Chat";
 
 function Home() {
     const navigate = useNavigate();
     const [prompt, setPrompt] = useState("");
-    const { createChat, postMessage, clear } = useChatStore();
+    const { createChat } = useChatsStore();
 
     const onSubmit = async () => {
         if (!prompt.trim()) return;
-        clear()
         const chatId = await createChat(NAME);
         if (chatId) {
-            navigate(`/${chatId}`);
-            await postMessage(chatId, prompt);
+            navigate(`/${chatId}`, { state: { initialPrompt: prompt } });
+            setPrompt("");
         }
     }
 

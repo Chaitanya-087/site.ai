@@ -6,7 +6,7 @@ import { Code, Rows2 } from "lucide-react";
 import { useTheme } from "../hooks/use-theme";
 import { Separator } from "./ui/separator";
 
-function RenderEditor({ language, code, onChange, theme }) {
+const RenderEditor = ({ language, code, onChange, theme }) => {
   const monaco = useMonaco();
 
   useEffect(() => {
@@ -50,6 +50,7 @@ function RenderEditor({ language, code, onChange, theme }) {
     />
   );
 }
+
 RenderEditor.propTypes = {
   language: PropTypes.string.isRequired,
   code: PropTypes.string.isRequired,
@@ -57,7 +58,7 @@ RenderEditor.propTypes = {
   theme: PropTypes.string.isRequired,
 };
 
-function CodeEditor({ code, setCode }) {
+export const CodeEditor = ({ code, setCode }) => {
   const [srcDoc, setSrcDoc] = useState("");
   const { theme } = useTheme();
 
@@ -105,7 +106,11 @@ function CodeEditor({ code, setCode }) {
         <iframe
           srcDoc={srcDoc}
           title="Live Preview"
-          src=""
+          style={{ width: "100%", height: "100%", border: "none" }}
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+          allowFullScreen
+          loading="lazy"
+          referrerPolicy="no-referrer-when-downgrade"
           sandbox="allow-scripts"
           className="w-full h-full border-none bg-white"
         />
@@ -116,7 +121,6 @@ function CodeEditor({ code, setCode }) {
   const keys = Object.keys(tabs);
   const [activeTab, setActiveTab] = useState(keys[0]);
 
-  // Update the iframe output whenever code changes
   useEffect(() => {
     const timeout = setTimeout(() => {
       const htmlContent = `
@@ -127,11 +131,16 @@ function CodeEditor({ code, setCode }) {
                             <meta name="viewport" content="width=device-width, initial-scale=1.0" />
                             <base target="_blank" />
                             <script src="https://cdn.tailwindcss.com"></script>
-                            <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.13.0/gsap.min.js"></script> 
-                            <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.20.1/cdn/themes/light.css" />
-                            <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.20.1/cdn/themes/dark.css" />
-                            <script type="module" src="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.20.1/cdn/shoelace-autoloader.js"></script>
+                            <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+                            <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
                             <style>${code.css}</style>
+                            <style> 
+                            html, body, #root {
+                                height: 100%;
+                                margin: 0;
+                                padding: 0;
+                              }
+                            </style>
                             <title>Preview</title>
                         </head>
                         <body>
@@ -156,7 +165,7 @@ function CodeEditor({ code, setCode }) {
   };
 
   return (
-    <div className="flex flex-col h-screen w-full">
+    <div className="flex flex-col h-full w-full">
       {/* Header */}
       <div className="flex items-center h-12 shadow border-b px-2">
         <Button variant="ghost" size="icon" className="w-7 h-7">
@@ -176,11 +185,10 @@ function CodeEditor({ code, setCode }) {
                   <button
                     onClick={() => setActiveTab(key)}
                     className={`px-3 py-1 rounded-full transition-all duration-200 text-sm
-                        ${
-                          activeTab === key
-                            ? "bg-gradient-to-r from-blue-500 to-indigo-500 text-white font-semibold shadow-md"
-                            : "hover:bg-muted text-muted-foreground"
-                        }
+                        ${activeTab === key
+                        ? "bg-gradient-to-r from-blue-500 to-indigo-500 text-white font-semibold shadow-md"
+                        : "hover:bg-muted text-muted-foreground"
+                      }
                     `}
                   >
                     {key}
@@ -198,11 +206,10 @@ function CodeEditor({ code, setCode }) {
           <button
             onClick={() => setActiveTab("preview")}
             className={`p-2 rounded-full transition-all duration-200
-            ${
-              activeTab === "preview"
+            ${activeTab === "preview"
                 ? "bg-gradient-to-r from-blue-500 to-indigo-500  text-white font-semibold shadow-md"
                 : "hover:bg-muted text-muted-foreground"
-            }
+              }
         `}
           >
             <Rows2 className="w-4 h-4" />
@@ -210,7 +217,12 @@ function CodeEditor({ code, setCode }) {
         </div>
       </div>
 
-      <div className="flex-1 bg-[#1a1a1a]">{tabs[activeTab].editor()}</div>
+      <div className="flex-1 relative">
+        <div className="absolute w-full h-full top-0 left-0 right-0 bottom-0">
+          {tabs[activeTab].editor()}
+        </div>
+      </div>
+
     </div>
   );
 }
@@ -223,5 +235,3 @@ CodeEditor.propTypes = {
   }).isRequired,
   setCode: PropTypes.func.isRequired,
 };
-
-export default CodeEditor;

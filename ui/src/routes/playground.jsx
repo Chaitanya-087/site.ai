@@ -1,49 +1,72 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useEffect, useRef, useState } from 'react';
+import { useLocation, useParams } from 'react-router-dom';
 import { Allotment } from "allotment";
 import { FaArrowDownLong } from "react-icons/fa6";
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Pause, Send } from 'lucide-react';
+import { Send } from 'lucide-react';
 import { SiteHeader } from '@/components/site-header';
 import { useChatStore } from '@/store/chat-store';
-import CodeEditor from '@/components/code-editor';
+import { CodeEditor } from '@/components/code-editor';
 import clsx from 'clsx';
 import { toast } from 'sonner';
 import { Skeleton } from '@/components/ui/skeleton';
 
 function Playground() {
   const { id } = useParams();
+  const location = useLocation();
   const chatAreaRef = useRef(null);
+  const initRef = useRef(false);
   const [prompt, setPrompt] = useState('');
   const [hasScrolledToTop, setHasScrolledToTop] = useState(false);
+  const errorTimestampRef = useRef(null);
+  const initialPromptRef = useRef(location.state?.initialPrompt || null);
+
   const {
-    selectedChat: chat = { messages: [], code: "" },
-    setSelectedChat,
-    chatIsProcessing,
+    chat,
     postMessage,
+    fetchChat,
+    isChatThinking,
+    error,
     clear,
-    error
   } = useChatStore();
 
   useEffect(() => {
-    if (id) {
-      setSelectedChat(id);
+    const init = async () => {
+      if (!id) return;
+
+      await fetchChat(id);
+
+      const prompt = initialPromptRef.current;
+      if (prompt) {
+        await postMessage(id, prompt.trim());
+        initialPromptRef.current = null;
+      }
     }
-  }, [id, setSelectedChat, clear]);
+
+    if (initRef.current) {
+      init();
+    }
+
+    return () => {
+      clear();
+      initRef.current = true;
+    }
+
+  }, [id, clear, postMessage, fetchChat]);
 
   useEffect(() => {
     scrollToBottom();
   }, [chat?.messages]);
 
   useEffect(() => {
-    if (error?.message) {
+    if (error && error.message && error.timestamp !== errorTimestampRef.current) {
       toast.error(error.message, {
         action: {
           label: "undo",
-          onClick: () => console.log("Undo"),
         },
       });
+      errorTimestampRef.current = error.timestamp;
     }
   }, [error]);
 
@@ -61,12 +84,10 @@ function Playground() {
     }
   };
 
-  const onSubmit = useCallback((customPrompt) => {
-    const finalPrompt = customPrompt || prompt;
-    if (!finalPrompt.trim()) return;
-    postMessage(id, finalPrompt.trim());
+  const onSubmit = () => {
+    postMessage(id, prompt.trim());
     setPrompt("");
-  }, [id, prompt, postMessage]);
+  };
 
   return (
     <Allotment separator className="w-full">
@@ -101,7 +122,7 @@ function Playground() {
                   </div>
                 );
               })}
-              {chatIsProcessing(id) && (
+              {isChatThinking(id) && (
                 <div className="flex w-full gap-2 items-center justify-start">
                   <div className="rounded-tl-xl rounded-b-xl rounded-tr-sm px-4 py-2">
                     <Skeleton className="h-4 w-[250px] mb-2" />
@@ -131,8 +152,8 @@ function Playground() {
                 onChange={(e) => setPrompt(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && onSubmit()}
               />
-              <Button className="rounded-full size-[40px]" disabled={chatIsProcessing(id)} onClick={() => onSubmit()}>
-                {chatIsProcessing(id) ? <Pause /> : <Send />}
+              <Button className="rounded-full size-[40px]" disabled={isChatThinking(id)} onClick={onSubmit}>
+                <Send />
               </Button>
             </div>
           </div>

@@ -1,8 +1,11 @@
+import React, { useEffect, useRef, useState } from "react"
+import { PropTypes } from "prop-types"
+
 import {
-    LogOutIcon,
-    UserCircleIcon,
-    SettingsIcon,
-    VaultIcon
+    LogOut,
+    UserCircle,
+    Settings,
+    Vault
 } from "lucide-react"
 
 import {
@@ -10,7 +13,6 @@ import {
     AvatarFallback,
     AvatarImage,
 } from "@/components/ui/avatar"
-
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -20,9 +22,7 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-
 import { Button } from "@/components/ui/button"
-
 import {
     Dialog,
     DialogContent,
@@ -31,48 +31,68 @@ import {
     DialogHeader,
     DialogTitle,
 } from "@/components/ui/dialog"
-
 import {
     SidebarMenu,
     SidebarMenuButton,
     SidebarMenuItem,
     useSidebar,
 } from "@/components/ui/sidebar"
-
 import {
     Tooltip,
     TooltipContent,
     TooltipProvider,
     TooltipTrigger,
 } from "@/components/ui/tooltip"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 
 import { useClerk } from "@clerk/clerk-react"
-import { useAuthStore } from "@/store/auth-store"
-import React, { useEffect, useState } from "react"
-import { Label } from "@radix-ui/react-dropdown-menu"
-import { Input } from "./ui/input"
-import { useChatStore } from "@/store/chat-store"
+import { useGeminiTokenStore } from "@/store/gemini-token-store"
+import { toast } from "sonner"
 
-export function NavUser() {
+export const NavUser = ({ user }) => {
     const clerk = useClerk();
-    const { user, signOut } = useAuthStore();
-    const { token, getToken, saveToken } = useChatStore();
+    const { token, fetchToken, saveToken, error } = useGeminiTokenStore();
     const { isMobile } = useSidebar();
     const [currentToken, setCurrentToken] = useState(token || "");
     const [openDialog, setOpenDialog] = useState(false);
+    const initRef = useRef(false);
+    const errorTimestampRef = useRef(null);
+
+    const handleSignOut = async () => {
+        sessionStorage.clear();
+        await clerk.signOut();
+    }
 
     useEffect(() => {
-        const fetchToken = async () => {
-            getToken()
+        const init = async () => {
+            await fetchToken();
+            setCurrentToken(token || "");
         }
-        fetchToken();
-    }, [getToken])
+        if (initRef.current) {
+            init();
+        }
+        return () => {
+            initRef.current = true;
+        }
+    }, [fetchToken, token])
 
     const onSubmit = async () => {
         if (!currentToken) return;
         await saveToken(currentToken)
         setOpenDialog(false)
     }
+
+    useEffect(() => {
+        if (error && error.message && error.timestamp !== errorTimestampRef.current) {
+            toast.error(error.message, {
+                action: {
+                    label: "undo",
+                },
+            });
+            errorTimestampRef.current = error.timestamp;
+        }
+    }, [error]);
 
     return (
         <React.Fragment>
@@ -95,7 +115,7 @@ export function NavUser() {
                                     </span>
                                 </div>
                                 <div className="relative w-fit">
-                                    <SettingsIcon className="ml-auto size-4" />
+                                    <Settings className="ml-auto size-4" />
 
                                     {!token && (
                                         <TooltipProvider>
@@ -136,30 +156,21 @@ export function NavUser() {
                             <DropdownMenuSeparator />
                             <DropdownMenuGroup>
                                 <DropdownMenuItem onClick={() => clerk.openUserProfile({})}>
-                                    <UserCircleIcon />
+                                    <UserCircle />
                                     Account
                                 </DropdownMenuItem>
                             </DropdownMenuGroup>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem className="relative w-full" onClick={() => setOpenDialog(true)} >
-                                <VaultIcon />
+                                <Vault />
                                 Vault
                                 {!token &&
-                                    // <TooltipProvider>
-                                    //     <Tooltip>
-                                    //         <TooltipTrigger>
-                                    //         </TooltipTrigger>
-                                    //         <TooltipContent>
-                                    //             Please add token in vault
-                                    //         </TooltipContent>
-                                    //     </Tooltip>
-                                    // </TooltipProvider>
                                     <div className="absolute top-1/2 right-2 -translate-y-1/2 w-2 h-2 rounded-full bg-red-600" />
                                 }
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem onClick={() => signOut(clerk)}>
-                                <LogOutIcon />
+                            <DropdownMenuItem onClick={handleSignOut}>
+                                <LogOut />
                                 Log out
                             </DropdownMenuItem>
                         </DropdownMenuContent>
@@ -190,4 +201,12 @@ export function NavUser() {
             </Dialog>
         </React.Fragment>
     )
+}
+
+NavUser.propTypes = {
+    user: PropTypes.shape({
+        name: PropTypes.string,
+        email: PropTypes.string,
+        avatar: PropTypes.string
+    }).isRequired
 }

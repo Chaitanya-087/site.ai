@@ -89,9 +89,9 @@ class Code(BaseModel):
         css (str): The CSS code snippet associated with the chat or response.
         js (str): The JavaScript code snippet associated with the chat or response.
     """
-    html: str = Field(default="")
-    css: str = Field(default="")
-    js: str = Field(default="")
+    html: Optional[str] = ""
+    css: Optional[str] = ""
+    js: Optional[str] = ""
 
 class Chat(BaseModel):
     """Represents a chat session containing messages, code, and metadata.

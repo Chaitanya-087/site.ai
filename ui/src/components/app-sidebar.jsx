@@ -1,4 +1,8 @@
+import React, { useEffect, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+
 import { Snail, Plus } from "lucide-react"
+
 import {
     Sidebar,
     SidebarContent,
@@ -10,35 +14,42 @@ import {
     SidebarMenuButton,
     SidebarMenuItem,
 } from "@/components/ui/sidebar"
-import React, { useEffect, useState } from "react";
-import { Button } from "./ui/button";
 import { NavUser } from "./nav-user";
 import { NavChats } from "./nav-chats";
-import { useClerk } from "@clerk/clerk-react";
-import { useAuthStore } from "@/store/auth-store";
-import { useChatStore } from "@/store/chat-store";
-import { Link, useNavigate } from "react-router-dom";
-import { Label } from "@radix-ui/react-dropdown-menu";
-import { Input } from "./ui/input";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "./ui/dialog";
-const NAME = "New Chat"
-export function AppSidebar() {
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+
+import { ClerkLoaded, ClerkLoading, useClerk } from "@clerk/clerk-react";
+import { useChatsStore } from "@/store/chats-store";
+
+import { formatUser } from "@/store/util";
+
+const DEFAULT_NAME = "New Chat"
+
+export const AppSidebar = () => {
     const clerk = useClerk();
     const navigate = useNavigate();
-    const { createChat } = useChatStore();
-    const { openSignIn, setUserFromClerk, isSignedIn } = useAuthStore();
-    const [name, setName] = useState(NAME);
+    const [user, setUser] = useState({});
+    const { createChat } = useChatsStore();
+    const [name, setName] = useState(DEFAULT_NAME);
     const [openDialog, setOpenDialog] = useState(false);
+
     useEffect(() => {
-        setUserFromClerk(clerk)
-    }, [clerk, setUserFromClerk])
+        const currentUser = clerk.user;
+        if (clerk.isSignedIn && currentUser) {
+            sessionStorage.setItem("userId", currentUser.id);
+            setUser(formatUser(currentUser));
+        }
+    }, [clerk.isSignedIn, clerk.user]);
 
     const handleCreateChat = async () => {
         const chatId = await createChat(name);
         if (chatId) {
             navigate(chatId);
             setOpenDialog(false);
-            setName(NAME)
+            setName(DEFAULT_NAME)
         }
     }
 
@@ -62,7 +73,7 @@ export function AppSidebar() {
                 </SidebarHeader>
 
                 <SidebarContent>
-                    {isSignedIn && <SidebarGroup>
+                    {<SidebarGroup>
                         <SidebarGroupContent>
                             <SidebarMenu>
                                 <SidebarMenuItem onClick={() => {
@@ -80,14 +91,12 @@ export function AppSidebar() {
                 </SidebarContent>
 
                 <SidebarFooter>
-                    {
-                        isSignedIn ?
-                            <NavUser />
-                            :
-                            <Button variant="default" onClick={() => openSignIn(clerk)} >
-                                login
-                            </Button>
-                    }
+                    <ClerkLoading>
+                        <p>loading...</p>
+                    </ClerkLoading>
+                    <ClerkLoaded>
+                        <NavUser user={user} />
+                    </ClerkLoaded>
                 </SidebarFooter>
 
             </Sidebar>
