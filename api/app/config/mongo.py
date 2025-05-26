@@ -6,16 +6,16 @@ from pymongo.errors import ConfigurationError, ServerSelectionTimeoutError
 import certifi
 from dotenv import load_dotenv
 
-load_dotenv()  # Only in local dev
+load_dotenv()
 
 logger = logging.getLogger(__name__)
 
 def verify_connection():
     try:
         client.admin.command("ping")
-        print("Connected to MongoDB successfully.")
+        logger.info("Connected to MongoDB successfully.")
     except Exception as e:
-        print("MongoDB connection failed:", str(e))
+        logger.error("MongoDB connection failed:", str(e))
 
 try:
     uri = os.getenv("MONGO_URI")
