@@ -32,7 +32,7 @@ export const AppSidebar = () => {
     const clerk = useClerk();
     const navigate = useNavigate();
     const [user, setUser] = useState({});
-    const { createChat } = useChatsStore();
+    const createChat = useChatsStore((state) => state.createChat);
     const [name, setName] = useState(DEFAULT_NAME);
     const [openDialog, setOpenDialog] = useState(false);
 

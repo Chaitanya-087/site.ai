@@ -52,7 +52,10 @@ import { toast } from "sonner"
 
 export const NavUser = ({ user }) => {
     const clerk = useClerk();
-    const { token, fetchToken, saveToken, error } = useGeminiTokenStore();
+    const token = useGeminiTokenStore((state) => state.token);
+    const fetchToken = useGeminiTokenStore((state) => state.fetchToken);
+    const saveToken = useGeminiTokenStore((state) => state.saveToken);
+    const error = useGeminiTokenStore((state) => state.error);
     const { isMobile } = useSidebar();
     const [currentToken, setCurrentToken] = useState(token || "");
     const [openDialog, setOpenDialog] = useState(false);
@@ -65,17 +68,21 @@ export const NavUser = ({ user }) => {
     }
 
     useEffect(() => {
+        if (initRef.current) return;
+
+        initRef.current = true;
+
         const init = async () => {
             await fetchToken();
-            setCurrentToken(token || "");
-        }
-        if (initRef.current) {
-            init();
-        }
-        return () => {
-            initRef.current = true;
-        }
-    }, [fetchToken, token])
+        };
+
+        init();
+    }, [fetchToken]);
+
+
+    useEffect(() => {
+        setCurrentToken(token || "")
+    }, [token])
 
     const onSubmit = async () => {
         if (!currentToken) return;

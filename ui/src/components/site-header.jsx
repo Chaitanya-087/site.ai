@@ -7,7 +7,7 @@ import { useChatsStore } from "@/store/chats-store";
 export function SiteHeader() {
     const { id } = useParams();
     const location = useLocation();
-    const { getName } = useChatsStore();
+    const getName = useChatsStore((state) => state.getName);
 
     return (
         <header className="flex h-12 shrink-0 items-center gap-2 border-b transition-[width,height] ease-linear w-full">

@@ -42,8 +42,12 @@ export const NavChats = () => {
     const { isMobile } = useSidebar();
     const [newName, setNewName] = useState();
     const [openDialogId, setOpenDialogId] = useState();
-    const { renameChat, deleteChat, chats, fetchChats, error } = useChatsStore();
-    const { isChatThinking } = useChatStore();
+    const chats = useChatsStore((state) => state.chats);
+    const error = useChatsStore((state) => state.error);
+    const renameChat = useChatsStore((state) => state.renameChat);
+    const deleteChat = useChatsStore((state) => state.deleteChat);
+    const fetchChats = useChatsStore((state) => state.fetchChats);
+    const isChatThinking = useChatStore((state) => state.isChatThinking);
     const [openDropdownId, setOpenDropdownId] = useState(null);
     const { theme } = useTheme();
     const errorTimestampRef = useRef(null);
@@ -62,17 +66,17 @@ export const NavChats = () => {
     }, [error]);
 
     useEffect(() => {
+        if (initRef.current) return
+
+        initRef.current = true;
+
         const init = async () => {
             setIsLoading(true);
             await fetchChats();
             setIsLoading(false);
         }
-        if (initRef.current) {
-            init();
-        }
-        return () => {
-            initRef.current = true;
-        }
+
+        init();
     }, [fetchChats])
 
     const handleDeleteChat = (chatId) => {

@@ -11,7 +11,7 @@ const NAME = "New Chat";
 function Home() {
     const navigate = useNavigate();
     const [prompt, setPrompt] = useState("");
-    const { createChat } = useChatsStore();
+    const createChat = useChatsStore((state) => state.createChat);
 
     const onSubmit = async () => {
         if (!prompt.trim()) return;

@@ -21,15 +21,12 @@ function Playground() {
   const [hasScrolledToTop, setHasScrolledToTop] = useState(false);
   const errorTimestampRef = useRef(null);
   const initialPromptRef = useRef(location.state?.initialPrompt || null);
-
-  const {
-    chat,
-    postMessage,
-    fetchChat,
-    isChatThinking,
-    error,
-    clear,
-  } = useChatStore();
+  const chat = useChatStore((state) => state.chat);
+  const error = useChatStore((state) => state.error);
+  const clear = useChatStore((state) => state.clear);
+  const fetchChat = useChatStore((state) => state.fetchChat);
+  const postMessage = useChatStore((state) => state.postMessage);
+  const isChatThinking = useChatStore((state) => state.isChatThinking);
 
   useEffect(() => {
     const init = async () => {
