@@ -10,6 +10,13 @@ export const useChatsStore = create<ChatsStore>((set, get) => ({
     chats: [],
     error: null,
 
+    updateName: (chatId, name) => {
+        set(produce((state: ChatsStore) => {
+            const chat = state.chats.find(c => c.id === chatId);
+            chat.name = name
+        }))
+    },
+
     getName: (chatId) => {
         const chat = get().chats.find((c) => c.id === chatId);
         return chat ? chat.name : null;

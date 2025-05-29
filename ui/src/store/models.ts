@@ -55,11 +55,14 @@ export interface ChatStore {
     error: ErrorState | null;
     isLoading: boolean;
     isThinking: boolean;
-    
+    toBePosted: boolean;
+
     clear: () => void;
     fetchChat: (chatId: string) => Promise<void>;
     postMessage: (chatId: string, prompt: string) => Promise<void>;
     isChatThinking: (chatId: string) => boolean;
+    setToBePosted: () => void;
+    resetToBePosted: () => void;
 }
 
 const userDAO = (user: UserResource) => ({
@@ -86,6 +89,7 @@ export interface ChatsStore {
     deleteChat: (chatId: string) => Promise<void>;
     renameChat: (chatId: string, name: string) => Promise<void>;
     getName: (chatId: string) => string | null;
+    updateName: (chatId: string, name: string) => void;
 }
 
 export interface GeminiTokenStore {

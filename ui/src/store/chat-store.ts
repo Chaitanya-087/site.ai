@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { produce } from "immer";
 import { createMessage, handleRequest, setError } from "./util";
 import { Chat, ChatStore, defaultChat, Response } from "./models";
+import { useChatsStore } from "./chats-store";
 
 const API: string = "https://site-ai.onrender.com";
 // const API: string = "http://localhost:8080";
@@ -11,6 +12,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   error: null,
   isLoading: false,
   isThinking: false,
+  toBePosted: false,
 
   clear: () => {
     set({
@@ -74,6 +76,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
           if (data.code.css) state.chat.code.css = data.code.css;
           if (data.code.html) state.chat.code.html = data.code.html;
           if (data.code.js) state.chat.code.js = data.code.js;
+          useChatsStore.getState().updateName(chatId, data.name);
           state.chat.name = data.name;
           state.isThinking = false;
         })
@@ -88,5 +91,13 @@ export const useChatStore = create<ChatStore>((set, get) => ({
         })
       );
     }
+  },
+
+  setToBePosted: () => {
+    set({ toBePosted: true })
+  },
+
+  resetToBePosted: () => {
+    set({ toBePosted: false })
   },
 }));

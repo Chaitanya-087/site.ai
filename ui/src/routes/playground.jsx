@@ -16,41 +16,36 @@ function Playground() {
   const { id } = useParams();
   const location = useLocation();
   const chatAreaRef = useRef(null);
-  const initRef = useRef(false);
+  // const initRef = useRef(false);
   const [prompt, setPrompt] = useState('');
   const [hasScrolledToTop, setHasScrolledToTop] = useState(false);
   const errorTimestampRef = useRef(null);
   const initialPromptRef = useRef(location.state?.initialPrompt || null);
   const chat = useChatStore((state) => state.chat);
   const error = useChatStore((state) => state.error);
+  const toBePosted = useChatStore((state) => state.toBePosted);
   const clear = useChatStore((state) => state.clear);
   const fetchChat = useChatStore((state) => state.fetchChat);
   const postMessage = useChatStore((state) => state.postMessage);
   const isChatThinking = useChatStore((state) => state.isChatThinking);
-
+  const resetToBePosted = useChatStore((state) => state.setToBePosted);
+  
   useEffect(() => {
     const init = async () => {
       if (!id) return;
-
+      clear();
       await fetchChat(id);
 
-      const prompt = initialPromptRef.current;
-      if (prompt) {
-        await postMessage(id, prompt.trim());
+      if (toBePosted) {
+        initialPromptRef.current && await postMessage(id, initialPromptRef.current.trim());
         initialPromptRef.current = null;
+        console.log("1")
+        resetToBePosted()
       }
-    }
+    };
 
-    if (initRef.current) {
-      init();
-    }
-
-    return () => {
-      clear();
-      initRef.current = true;
-    }
-
-  }, [id, clear, postMessage, fetchChat]);
+    init();
+  }, [id, clear, fetchChat, postMessage, toBePosted, resetToBePosted]);
 
   useEffect(() => {
     scrollToBottom();

@@ -5,6 +5,7 @@ import { Send } from "lucide-react";
 import { SiteHeader } from "@/components/site-header";
 import { useNavigate } from "react-router-dom";
 import { useChatsStore } from "@/store/chats-store";
+import { useChatStore } from "@/store/chat-store";
 
 const NAME = "New Chat";
 
@@ -12,11 +13,13 @@ function Home() {
     const navigate = useNavigate();
     const [prompt, setPrompt] = useState("");
     const createChat = useChatsStore((state) => state.createChat);
+    const setToBePosted = useChatStore((state) => state.setToBePosted);
 
     const onSubmit = async () => {
         if (!prompt.trim()) return;
         const chatId = await createChat(NAME);
         if (chatId) {
+            setToBePosted();
             navigate(`/${chatId}`, { state: { initialPrompt: prompt } });
             setPrompt("");
         }
