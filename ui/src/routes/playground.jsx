@@ -11,12 +11,12 @@ import { CodeEditor } from '@/components/code-editor';
 import clsx from 'clsx';
 import { toast } from 'sonner';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useChatsStore } from '@/store/chats-store';
 
 function Playground() {
   const { id } = useParams();
   const location = useLocation();
   const chatAreaRef = useRef(null);
-  // const initRef = useRef(false);
   const [prompt, setPrompt] = useState('');
   const [hasScrolledToTop, setHasScrolledToTop] = useState(false);
   const errorTimestampRef = useRef(null);
@@ -27,9 +27,9 @@ function Playground() {
   const clear = useChatStore((state) => state.clear);
   const fetchChat = useChatStore((state) => state.fetchChat);
   const postMessage = useChatStore((state) => state.postMessage);
-  const isChatThinking = useChatStore((state) => state.isChatThinking);
   const resetToBePosted = useChatStore((state) => state.setToBePosted);
-  
+  const getIsProcessing = useChatsStore((state) => state.getIsProcessing);
+
   useEffect(() => {
     const init = async () => {
       if (!id) return;
@@ -114,7 +114,7 @@ function Playground() {
                   </div>
                 );
               })}
-              {isChatThinking(id) && (
+              {getIsProcessing(id) && (
                 <div className="flex w-full gap-2 items-center justify-start">
                   <div className="rounded-tl-xl rounded-b-xl rounded-tr-sm px-4 py-2">
                     <Skeleton className="h-4 w-[250px] mb-2" />
@@ -144,7 +144,7 @@ function Playground() {
                 onChange={(e) => setPrompt(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && onSubmit()}
               />
-              <Button className="rounded-full size-[40px]" disabled={isChatThinking(id)} onClick={onSubmit}>
+              <Button className="rounded-full size-[40px]" disabled={getIsProcessing(id)} onClick={onSubmit}>
                 <Send />
               </Button>
             </div>

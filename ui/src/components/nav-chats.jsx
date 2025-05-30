@@ -32,9 +32,7 @@ import { Loader } from "./loader"
 import { useTheme } from "@/hooks/use-theme"
 import { useChatsStore } from "@/store/chats-store"
 import { SpinnerCircularFixed } from "spinners-react"
-import { useChatStore } from "@/store/chat-store"
 import { toast } from 'sonner';
-
 
 export const NavChats = () => {
     const location = useLocation();
@@ -47,7 +45,6 @@ export const NavChats = () => {
     const renameChat = useChatsStore((state) => state.renameChat);
     const deleteChat = useChatsStore((state) => state.deleteChat);
     const fetchChats = useChatsStore((state) => state.fetchChats);
-    const isChatThinking = useChatStore((state) => state.isChatThinking);
     const [openDropdownId, setOpenDropdownId] = useState(null);
     const { theme } = useTheme();
     const errorTimestampRef = useRef(null);
@@ -123,7 +120,7 @@ export const NavChats = () => {
                                         </NavLink>
                                     </SidebarMenuButton>
 
-                                    {isChatThinking(chat.id) ?
+                                    {chat.isProcessing ?
                                         <Button variant="ghost" className="px-2 py-1 flex focus-visible:ring-0 hover:bg-transparent">
                                             <SpinnerCircularFixed size={20} thickness={125} speed={100} color={theme == 'dark' ? "#ffffff" : "#000000"} secondaryColor={theme == 'dark' ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)"} />
                                         </Button>

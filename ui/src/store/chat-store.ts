@@ -4,14 +4,13 @@ import { createMessage, handleRequest, setError } from "./util";
 import { Chat, ChatStore, defaultChat, Response } from "./models";
 import { useChatsStore } from "./chats-store";
 
-const API: string = "https://site-ai.onrender.com";
-// const API: string = "http://localhost:8080";
+// const API: string = "https://site-ai.onrender.com";
+const API = import.meta.env.VITE_API_URL;
 
 export const useChatStore = create<ChatStore>((set, get) => ({
   chat: defaultChat,
   error: null,
   isLoading: false,
-  isThinking: false,
   toBePosted: false,
 
   clear: () => {
@@ -31,21 +30,15 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     }
   },
 
-  isChatThinking: (chatId) => {
-    const chat = get().chat;
-    if (chat.id === chatId) {
-      return get().isThinking;
-    }
-    return false;
-  },
-
   postMessage: async (chatId, prompt) => {
-    const userId = sessionStorage.getItem("userId");
+    const rawUserId = sessionStorage.getItem("userId");
 
-    if (!userId) {
+    if (!rawUserId || typeof rawUserId !== "string" || !rawUserId.trim()) {
       setError(set, "User not found");
       return;
     }
+    
+    const userId = rawUserId.trim();
 
     if (!prompt.trim()) {
       setError(set, "Prompt is empty");
@@ -55,7 +48,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     set(
       produce((state: ChatStore) => {
         state.chat.messages.push(createMessage(prompt, "user"));
-        state.isThinking = true;
+        useChatsStore.getState().setIsProcessing(chatId, true);
       })
     );
 
@@ -78,13 +71,13 @@ export const useChatStore = create<ChatStore>((set, get) => ({
           if (data.code.js) state.chat.code.js = data.code.js;
           useChatsStore.getState().updateName(chatId, data.name);
           state.chat.name = data.name;
-          state.isThinking = false;
+          useChatsStore.getState().setIsProcessing(chatId, false);
         })
       );
     } else {
       set(
         produce((state: ChatStore) => {
-          state.isThinking = false;
+          useChatsStore.getState().setIsProcessing(chatId, false);
           state.chat.messages = state.chat.messages.filter(
             (message) => message.content !== prompt
           );

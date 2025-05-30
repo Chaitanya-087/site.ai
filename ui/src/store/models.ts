@@ -1,5 +1,3 @@
-import { UserResource } from "@clerk/types";
-
 export interface Message {
     id: string;
     type: "ai" | "user";
@@ -50,38 +48,28 @@ export const defaultChat: Chat = ({
     },
 });
 
+export const chatDAO = (chat: BasicChat) => ({
+    ...chat,
+    isProcessing: false
+});
+
+export interface ChatWithUI extends ReturnType<typeof chatDAO> { }
+
 export interface ChatStore {
     chat: Chat;
     error: ErrorState | null;
     isLoading: boolean;
-    isThinking: boolean;
     toBePosted: boolean;
 
     clear: () => void;
     fetchChat: (chatId: string) => Promise<void>;
     postMessage: (chatId: string, prompt: string) => Promise<void>;
-    isChatThinking: (chatId: string) => boolean;
     setToBePosted: () => void;
     resetToBePosted: () => void;
 }
 
-const userDAO = (user: UserResource) => ({
-    id: user.id,
-    name: `${user.firstName || ""} ${user.lastName || ""}`.trim(),
-    email: user.primaryEmailAddress?.emailAddress,
-    avatar: user.imageUrl,
-});
-
-interface User extends ReturnType<typeof userDAO> { }
-
-export interface UserStore {
-    user: User | null;
-    setUser: (user: UserResource) => void;
-    clearUser: () => void;
-}
-
 export interface ChatsStore {
-    chats: BasicChat[];
+    chats: ChatWithUI[];
     error: ErrorState | null;
 
     fetchChats: () => Promise<void>;
@@ -90,6 +78,8 @@ export interface ChatsStore {
     renameChat: (chatId: string, name: string) => Promise<void>;
     getName: (chatId: string) => string | null;
     updateName: (chatId: string, name: string) => void;
+    setIsProcessing: (chatId: string, value: boolean) => void;
+    getIsProcessing: (chatId: string) => boolean;
 }
 
 export interface GeminiTokenStore {

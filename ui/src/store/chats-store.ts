@@ -1,14 +1,16 @@
 import { create } from "zustand";
-import { BasicChat, ChatsStore } from "./models";
+import { BasicChat, chatDAO, ChatsStore, ChatWithUI } from "./models";
 import { handleRequest, setError } from "./util";
 import { produce } from "immer";
 
-const API: string = "https://site-ai.onrender.com";
+// const API: string = "https://site-ai.onrender.com";
 // const API = "http://localhost:8080";
+const API = import.meta.env.VITE_API_URL;
 
 export const useChatsStore = create<ChatsStore>((set, get) => ({
     chats: [],
     error: null,
+    isLoading: false,
 
     updateName: (chatId, name) => {
         set(produce((state: ChatsStore) => {
@@ -17,18 +19,17 @@ export const useChatsStore = create<ChatsStore>((set, get) => ({
         }))
     },
 
-    getName: (chatId) => {
-        const chat = get().chats.find((c) => c.id === chatId);
-        return chat ? chat.name : null;
-    },
-
     fetchChats: async () => {
-        const userId = sessionStorage.getItem("userId");
-        if (!userId) {
+        const rawUserId = sessionStorage.getItem("userId");
+
+        if (!rawUserId || typeof rawUserId !== "string" || !rawUserId.trim()) {
             setError(set, "User not found");
             return;
         }
-        const data = await handleRequest<BasicChat[]>(
+
+        const userId = rawUserId.trim();
+
+        const data = await handleRequest<ChatWithUI[]>(
             `${API}/chats/users/${userId}/all`,
             {},
             set
@@ -41,8 +42,11 @@ export const useChatsStore = create<ChatsStore>((set, get) => ({
                         new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
                 );
             set({ chats });
+        } else {
+            setError(set, "error while fetching chats");
         }
     },
+
     createChat: async (name) => {
         const userId = sessionStorage.getItem("userId");
         if (!userId) {
@@ -61,7 +65,7 @@ export const useChatsStore = create<ChatsStore>((set, get) => ({
             set
         );
         if (data) {
-            const newChat = data;
+            const newChat = chatDAO(data);
             set(
                 produce((state: ChatsStore) => {
                     state.chats.unshift(newChat);
@@ -71,6 +75,7 @@ export const useChatsStore = create<ChatsStore>((set, get) => ({
         }
         return null;
     },
+
     deleteChat: async (chatId) => {
         const success = await handleRequest<void>(
             `${API}/chats/${chatId}`,
@@ -85,6 +90,7 @@ export const useChatsStore = create<ChatsStore>((set, get) => ({
             );
         }
     },
+
     renameChat: async (chatId, name) => {
         const success = await handleRequest<void>(
             `${API}/chats/${chatId}/rename`,
@@ -103,5 +109,25 @@ export const useChatsStore = create<ChatsStore>((set, get) => ({
                 })
             );
         }
+    },
+
+    getName: (chatId) => {
+        const chat = get().chats.find((c) => c.id === chatId);
+        return chat ? chat.name : null;
+    },
+
+    setIsProcessing: (chatId, value) => {
+        set(
+            produce((state: ChatsStore) => {
+                const chat = state.chats.find(c => c.id === chatId);
+                if (chat) {
+                    chat.isProcessing = value
+                }
+            })
+        )
+    },
+
+    getIsProcessing: (chatId) => {
+        return get().chats.find(c => c.id === chatId)?.isProcessing;
     }
 }));

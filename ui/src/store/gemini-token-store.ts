@@ -2,8 +2,8 @@ import { create } from "zustand";
 import { GeminiTokenStore, TokenResponse } from "./models";
 import { handleRequest, setError } from "./util";
 
-const API: string = "https://site-ai.onrender.com";
-// const API = "http://localhost:8080";
+// const API: string = "https://site-ai.onrender.com";
+const API = import.meta.env.VITE_API_URL;
 
 export const useGeminiTokenStore = create<GeminiTokenStore>((set, _) => ({
     token: "",
